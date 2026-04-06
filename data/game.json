@@ -1,0 +1,15 @@
+{
+  "game-id": "circuit-breaker",
+  "title": "Circuit Breaker",
+  "subject": "Science",
+  "description": "Digital logic bomb-defusal trainer: gates, latches, truth tables, and an AI tutor.",
+  "longDescription": [
+    "Circuit Breaker is a circuit-lab style trainer where each level is a timed \"charge\" to disarm by building or adjusting logic: AND, OR, NOT, and flip-flops.",
+    "Campaign stages teach fundamentals through SR latches and JK flip-flops; Endless mode can pull fresh objectives when the portal's AI API is available.",
+    "Players practice Boolean reasoning, truth tables, and debugging circuits with optional hints from the in-game ordnance officer."
+  ],
+  "tags": ["digital logic", "boolean", "circuits", "education"],
+  "embedHeight": "100vh",
+  "featured": true,
+  "version": "0.1.0"
+}

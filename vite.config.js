@@ -1,8 +1,10 @@
 // ============================================================
-// Vite — dev/preview API for AI tutor (OpenAI key stays server-side)
+// Vite — portal base path + local /api/ai/openai (OpenAI key server-side)
+// When PORTAL_DEV=1 in .env.local, /api proxies to the portal (localhost:3000).
 // ============================================================
 
 import { defineConfig, loadEnv } from "vite";
+import gameData from "./data/game.json";
 
 /**
  * @param {import("http").IncomingMessage} req
@@ -22,13 +24,18 @@ function readRequestBody(req) {
   });
 }
 
+const GAME_BASE = `/staticGames/${gameData["game-id"]}/`;
+
 /**
+ * Same contract as the portal: POST /api/ai/openai with { model, messages, max_tokens?, temperature? }.
+ * Returns the upstream OpenAI JSON body on success.
+ *
  * @param {Record<string, string>} env from loadEnv
  */
-function tutorApiMiddleware(env) {
+function localOpenAiMiddleware(env) {
   return async (req, res, next) => {
     const path = (req.url || "").split("?")[0];
-    if (path !== "/api/tutor" || req.method !== "POST") {
+    if (path !== "/api/ai/openai" || req.method !== "POST") {
       next();
       return;
     }
@@ -39,8 +46,10 @@ function tutorApiMiddleware(env) {
       res.setHeader("Content-Type", "application/json");
       res.end(
         JSON.stringify({
-          error:
-            "OPENAI_API_KEY is not set. Copy .env.example to .env.local, add your key, and restart the dev server.",
+          error: {
+            message:
+              "OPENAI_API_KEY is not set. Copy .env.example to .env.local, add your key, and restart the dev server — or run the portal with PORTAL_DEV=1.",
+          },
         })
       );
       return;
@@ -53,37 +62,34 @@ function tutorApiMiddleware(env) {
     } catch {
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "Invalid JSON body" }));
+      res.end(JSON.stringify({ error: { message: "Invalid JSON body" } }));
       return;
     }
 
-    const model = (env.OPENAI_MODEL || "gpt-4o-mini").trim();
+    const model = String(body.model || env.OPENAI_MODEL || "gpt-4o-mini").trim();
     const messages = Array.isArray(body.messages) ? body.messages : [];
+    const allowed = new Set(["system", "user", "assistant"]);
     const safeMessages = messages
-      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-      .slice(-20);
+      .filter((m) => m && allowed.has(m.role) && typeof m.content === "string")
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 200_000) }))
+      .slice(-30);
 
     if (safeMessages.length === 0) {
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "messages[] required" }));
+      res.end(JSON.stringify({ error: { message: "messages[] required" } }));
       return;
     }
 
-    /** @type {{ role: string, content: string }[]} */
-    const openaiMessages = [];
-    if (typeof body.system === "string" && body.system.length > 0) {
-      openaiMessages.push({ role: "system", content: body.system.slice(0, 200_000) });
-    }
-    for (const m of safeMessages) {
-      openaiMessages.push({ role: m.role, content: m.content });
-    }
-
+    const maxTok = Number(body.max_tokens);
     const payload = {
       model,
-      max_tokens: 1024,
-      messages: openaiMessages,
+      messages: safeMessages,
+      max_tokens: Number.isFinite(maxTok) ? Math.min(Math.max(maxTok, 1), 4096) : 1024,
     };
+    if (body.temperature !== undefined && body.temperature !== null) {
+      payload.temperature = Number(body.temperature);
+    }
 
     try {
       const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -96,50 +102,57 @@ function tutorApiMiddleware(env) {
       });
 
       const data = await upstream.json();
-
-      if (!upstream.ok) {
-        const msg =
-          (typeof data?.error?.message === "string" && data.error.message) ||
-          (typeof data?.error === "string" && data.error) ||
-          `OpenAI API error (${upstream.status})`;
-        res.statusCode = upstream.status >= 400 && upstream.status < 600 ? upstream.status : 502;
-        res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ error: msg }));
-        return;
-      }
-
-      const text = data.choices?.[0]?.message?.content?.trim() || "";
-
-      res.statusCode = 200;
+      res.statusCode = upstream.status;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ text }));
+      res.end(JSON.stringify(data));
     } catch (e) {
-      console.error("[tutor api]", e);
+      console.error("[api/ai/openai]", e);
       res.statusCode = 502;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: e instanceof Error ? e.message : "Upstream request failed" }));
+      res.end(
+        JSON.stringify({
+          error: { message: e instanceof Error ? e.message : "Upstream request failed" },
+        })
+      );
     }
   };
 }
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const usePortalProxy = env.PORTAL_DEV === "1";
 
-  const mountTutor = (server) => {
-    server.middlewares.use(tutorApiMiddleware(env));
+  const apiProxy = {
+    "/api": {
+      target: "http://localhost:3000",
+      changeOrigin: true,
+    },
+  };
+
+  const mountLocalOpenAi = (server) => {
+    server.middlewares.use(localOpenAiMiddleware(env));
   };
 
   return {
-    plugins: [
-      {
-        name: "circuit-tutor-api",
-        configureServer(server) {
-          mountTutor(server);
-        },
-        configurePreviewServer(server) {
-          mountTutor(server);
-        },
-      },
-    ],
+    base: GAME_BASE,
+    plugins: usePortalProxy
+      ? []
+      : [
+          {
+            name: "circuit-local-openai",
+            configureServer(server) {
+              mountLocalOpenAi(server);
+            },
+            configurePreviewServer(server) {
+              mountLocalOpenAi(server);
+            },
+          },
+        ],
+    server: {
+      ...(usePortalProxy ? { proxy: apiProxy } : {}),
+    },
+    preview: {
+      ...(usePortalProxy ? { proxy: apiProxy } : {}),
+    },
   };
 });

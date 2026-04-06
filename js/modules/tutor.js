@@ -1,10 +1,11 @@
 // ============================================================
-//  TUTOR.JS — AI tutor via local /api/tutor (OpenAI on server)
+//  TUTOR.JS — AI via portal POST /api/ai/openai (or local Vite middleware)
 // ============================================================
 
 import { randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
 
-const TUTOR_URL = "/api/tutor";
+const AI_URL = "/api/ai/openai";
+const DEFAULT_MODEL = "gpt-4o-mini";
 
 const ENDLESS_SYSTEM = `You are generating a digital-logic BUILD challenge for a circuit-lab sandbox.
 Output ONLY valid JSON (no markdown fences, no commentary). Schema:
@@ -12,10 +13,28 @@ Output ONLY valid JSON (no markdown fences, no commentary). Schema:
 Rules: table must include all eight 3-bit keys. Each F is 0 or 1. Do not make F constant on every row. Prefer interesting but buildable functions (majority, mux, parity, etc.).`;
 
 async function callTutorApi(payload) {
-  const response = await fetch(TUTOR_URL, {
+  /** @type {{ role: string, content: string }[]} */
+  const messages = [];
+  if (typeof payload.system === "string" && payload.system.length > 0) {
+    messages.push({ role: "system", content: payload.system.slice(0, 200_000) });
+  }
+  const hist = Array.isArray(payload.messages) ? payload.messages : [];
+  for (const m of hist) {
+    if (m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string") {
+      messages.push({ role: m.role, content: m.content });
+    }
+  }
+
+  const model = (import.meta.env.VITE_OPENAI_MODEL || DEFAULT_MODEL).trim();
+
+  const response = await fetch(AI_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 1024,
+    }),
   });
 
   let data = {};
@@ -26,15 +45,20 @@ async function callTutorApi(payload) {
   }
 
   if (!response.ok) {
-    const err = typeof data.error === "string" ? data.error : response.statusText || "Request failed";
+    const err =
+      (typeof data?.error?.message === "string" && data.error.message) ||
+      (typeof data?.error === "string" && data.error) ||
+      response.statusText ||
+      "Request failed";
     throw new Error(err);
   }
 
-  if (typeof data.text !== "string" || !data.text.trim()) {
-    throw new Error("Empty response from tutor API");
+  const text = data.choices?.[0]?.message?.content?.trim() || "";
+  if (!text) {
+    throw new Error("Empty response from AI");
   }
 
-  return data.text.trim();
+  return text;
 }
 
 export class AITutor {
@@ -116,7 +140,7 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
 
   _getDefaultIntro(err) {
     if (err instanceof Error && (err.message.includes("OPENAI_API_KEY") || err.message.includes("not set"))) {
-      return "I'm offline until you add OPENAI_API_KEY to .env.local and restart `npm run dev`. Until then, study the objective and truth tables — you've got this.";
+      return "I'm offline until OpenAI is configured (this game repo: .env.local + OPENAI_API_KEY, or the web portal's AI proxy). Until then, study the objective and truth tables — you've got this.";
     }
     return "Sapper, this charge is live — study the detonation chain, toggle the inputs, and find the combo that disarms it before the fuse burns through. Shout if you need intel.";
   }
@@ -125,7 +149,7 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
     if (err instanceof Error) {
       const m = err.message;
       if (m.includes("OPENAI_API_KEY") || m.includes("not set")) {
-        return "Tutor needs OPENAI_API_KEY in .env.local (see .env.example). Restart the dev server after saving.";
+        return "Tutor needs an API key: add OPENAI_API_KEY to .env.local here, or use the portal embed so /api/ai/openai is provided.";
       }
       if (m.length < 200) {
         return `I can't reach the AI right now (${m}). Try a built-in hint: work backwards from the output you need, or toggle one input at a time.`;
