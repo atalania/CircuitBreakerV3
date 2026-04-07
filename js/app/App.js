@@ -54,6 +54,8 @@ export class App {
     this._srInvalidActive = false;
     /** @type {number} epoch ms — for portal assistant timeSpentSeconds */
     this._levelPlayStartedAt = 0;
+    /** @type {number} monotonically increasing endless request token */
+    this._endlessRequestId = 0;
 
     this.labCanvas = new LabCanvasController({
       isLabMode: () => this.labMode,
@@ -232,7 +234,6 @@ export class App {
     this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
 
     this.tutor.setLevelContext(this.currentLevel.tutorContext);
-    this.tutor.getIntroMessage();
 
     if (this.currentLevel.id === 1) {
       this.ui.addChatMessage(
@@ -250,6 +251,7 @@ export class App {
 
   async _startEndless() {
     this._teardownLabUi();
+    const requestId = ++this._endlessRequestId;
     this.endlessMode = true;
     this.labMode = true;
     this.currentLevel = null;
@@ -278,6 +280,9 @@ export class App {
     this._labRedraw();
 
     const spec = await this.tutor.fetchEndlessChallenge();
+    if (!this.endlessMode || requestId !== this._endlessRequestId) {
+      return;
+    }
     this.endlessSpec = spec;
     this._levelPlayStartedAt = Date.now();
     this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
@@ -286,7 +291,6 @@ export class App {
     );
     this.ui.updateLevelInfo(-1, spec.title);
     this.ui.updateObjective(spec.objective);
-    this.tutor.getIntroMessage();
     this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
   }
 

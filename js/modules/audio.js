@@ -10,6 +10,7 @@ export class AudioManager {
   }
 
   init() {
+    if (this.ctx) return;
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     } catch {

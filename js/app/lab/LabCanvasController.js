@@ -21,6 +21,7 @@ import { svgClientToSvg } from "./svgClientToSvg.js";
  */
 
 export class LabCanvasController {
+  static WIRE_DROP_SNAP_RADIUS_PX = 20;
   /**
    * @param {LabCanvasHost} host
    */
@@ -248,16 +249,66 @@ export class LabCanvasController {
     const renderer = this.host.getRenderer();
     if (renderer && renderer.svg) this.host.getCircuitLab().hideWirePreview(renderer);
     if (d && d.fromKey) {
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const port = el && /** @type {Element} */ (el).closest(".lab-port");
-      if (port) {
-        const pname = port.dataset.port || "";
-        const pkey = port.dataset.portKey || "";
-        if (pname === "in" || pname === "in0" || pname === "in1") {
-          this.host.getCircuitLab().connectPorts(d.fromKey, pkey);
-        }
+      const svg = renderer && renderer.svg;
+      if (svg) {
+        const port = this._findDropPort(svg, e.clientX, e.clientY);
+        if (port) this.host.getCircuitLab().connectPorts(d.fromKey, port.dataset.portKey || "");
       }
     }
     this.host.onLabChanged();
+  }
+
+  /**
+   * Prefer the element directly under the cursor; otherwise snap to nearest input port.
+   * @param {SVGSVGElement} svg
+   * @param {number} clientX
+   * @param {number} clientY
+   */
+  _findDropPort(svg, clientX, clientY) {
+    const el = document.elementFromPoint(clientX, clientY);
+    const direct = el && /** @type {Element} */ (el).closest(".lab-port");
+    if (direct) {
+      const pname = direct.dataset.port || "";
+      return pname.startsWith("in") ? direct : null;
+    }
+
+    const { x, y } = svgClientToSvg(svg, clientX, clientY);
+    const snapR = this._clientPxToSvgUnits(svg, clientX, clientY, LabCanvasController.WIRE_DROP_SNAP_RADIUS_PX);
+
+    /** @type {Element | null} */
+    let best = null;
+    let bestD2 = snapR * snapR;
+
+    svg.querySelectorAll(".lab-port").forEach((p) => {
+      const pname = p.dataset.port || "";
+      if (!pname.startsWith("in")) return;
+      const cx = parseFloat(p.getAttribute("cx") || "0");
+      const cy = parseFloat(p.getAttribute("cy") || "0");
+      const dx = cx - x;
+      const dy = cy - y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= bestD2) {
+        bestD2 = d2;
+        best = p;
+      }
+    });
+
+    return best;
+  }
+
+  /**
+   * Converts a screen-space pixel distance into SVG coordinate units at a point.
+   * @param {SVGSVGElement} svg
+   * @param {number} clientX
+   * @param {number} clientY
+   * @param {number} px
+   */
+  _clientPxToSvgUnits(svg, clientX, clientY, px) {
+    const a = svgClientToSvg(svg, clientX, clientY);
+    const b = svgClientToSvg(svg, clientX + px, clientY);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const r = Math.hypot(dx, dy);
+    return Number.isFinite(r) && r > 0 ? r : px;
   }
 }

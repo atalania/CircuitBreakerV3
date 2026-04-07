@@ -24,6 +24,70 @@ function readRequestBody(req) {
   });
 }
 
+/**
+ * Simple in-memory sliding-window rate limiter (dev server / preview only).
+ * Key it by client IP to avoid accidental rapid-fire API calls.
+ *
+ * @param {{ windowMs: number, max: number, maxInFlight: number }} opts
+ */
+function createRateLimiter(opts) {
+  const windowMs = Math.max(250, opts.windowMs | 0);
+  const max = Math.max(1, opts.max | 0);
+  const maxInFlight = Math.max(1, opts.maxInFlight | 0);
+
+  /** @type {Map<string, number[]>} */
+  const hits = new Map();
+  /** @type {Map<string, number>} */
+  const inFlight = new Map();
+
+  function prune(now, arr) {
+    const cutoff = now - windowMs;
+    let i = 0;
+    while (i < arr.length && arr[i] <= cutoff) i++;
+    if (i > 0) arr.splice(0, i);
+  }
+
+  return {
+    /**
+     * @param {string} key
+     * @returns {{ ok: true, release: () => void } | { ok: false, retryAfterMs: number }}
+     */
+    acquire(key) {
+      const now = Date.now();
+      const arr = hits.get(key) || [];
+      prune(now, arr);
+
+      const inflightCount = inFlight.get(key) || 0;
+      if (inflightCount >= maxInFlight) {
+        return { ok: false, retryAfterMs: 1000 };
+      }
+
+      if (arr.length >= max) {
+        const earliest = arr[0] || now;
+        const retryAfterMs = Math.max(250, windowMs - (now - earliest));
+        hits.set(key, arr);
+        return { ok: false, retryAfterMs };
+      }
+
+      arr.push(now);
+      hits.set(key, arr);
+      inFlight.set(key, inflightCount + 1);
+
+      let released = false;
+      return {
+        ok: true,
+        release() {
+          if (released) return;
+          released = true;
+          const cur = inFlight.get(key) || 0;
+          if (cur <= 1) inFlight.delete(key);
+          else inFlight.set(key, cur - 1);
+        },
+      };
+    },
+  };
+}
+
 const GAME_BASE = `/staticGames/${gameData["game-id"]}/`;
 
 /**
@@ -33,10 +97,38 @@ const GAME_BASE = `/staticGames/${gameData["game-id"]}/`;
  * @param {Record<string, string>} env from loadEnv
  */
 function localOpenAiMiddleware(env) {
+  const limiter = createRateLimiter({
+    windowMs: 60_000,
+    max: Number(env.AI_RATE_LIMIT_PER_MINUTE) > 0 ? Number(env.AI_RATE_LIMIT_PER_MINUTE) : 12,
+    maxInFlight: Number(env.AI_RATE_LIMIT_IN_FLIGHT) > 0 ? Number(env.AI_RATE_LIMIT_IN_FLIGHT) : 2,
+  });
+
   return async (req, res, next) => {
     const path = (req.url || "").split("?")[0];
     if (path !== "/api/ai/openai" || req.method !== "POST") {
       next();
+      return;
+    }
+
+    const ip =
+      (req.headers["x-forwarded-for"] &&
+        String(req.headers["x-forwarded-for"]).split(",")[0].trim()) ||
+      req.socket?.remoteAddress ||
+      "unknown";
+
+    const lease = limiter.acquire(ip);
+    if (!lease.ok) {
+      const seconds = Math.max(1, Math.ceil(lease.retryAfterMs / 1000));
+      res.statusCode = 429;
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Retry-After", String(seconds));
+      res.end(
+        JSON.stringify({
+          error: {
+            message: `Rate limit exceeded. Try again in ${seconds}s.`,
+          },
+        })
+      );
       return;
     }
 
@@ -52,6 +144,7 @@ function localOpenAiMiddleware(env) {
           },
         })
       );
+      lease.release();
       return;
     }
 
@@ -63,6 +156,7 @@ function localOpenAiMiddleware(env) {
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ error: { message: "Invalid JSON body" } }));
+      lease.release();
       return;
     }
 
@@ -78,6 +172,7 @@ function localOpenAiMiddleware(env) {
       res.statusCode = 400;
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ error: { message: "messages[] required" } }));
+      lease.release();
       return;
     }
 
@@ -114,6 +209,8 @@ function localOpenAiMiddleware(env) {
           error: { message: e instanceof Error ? e.message : "Upstream request failed" },
         })
       );
+    } finally {
+      lease.release();
     }
   };
 }
