@@ -1,4 +1,4 @@
-## CIRCUIT BREAKER — Bomb Defusal Logic Trainer
+## CIRCUIT BREAKER💣 — Bomb Defusal Logic Trainer
 
 Circuit Breaker is a browser-based **digital logic bomb-defusal trainer**.  
 Each "live charge" is a self-contained circuit lab: drag gates and wires, reason about truth tables, and find the input pattern that disarms the bomb before the fuse burns down.
@@ -121,5 +121,4 @@ If the key or proxy is not configured, the tutor will automatically fall back to
 
 - This repo uses **Vite** (see `package.json`) with a minimal dev setup.
 - Keep `.env.local` **out of version control**; never commit real API keys.
-- 
 <div align="center">
