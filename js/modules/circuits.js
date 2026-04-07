@@ -11,6 +11,8 @@ export class CircuitRenderer {
     this.inputs = {};
     this.outputs = {};
     this.onInputChange = null;
+    /** @type {null | ((id: string) => boolean)} Return false to block toggling (e.g. circuit lab erase/wire tools). */
+    this.allowSwitchToggle = null;
     this.animationFrame = null;
     this.pulsePhase = 0;
   }
@@ -27,8 +29,7 @@ export class CircuitRenderer {
   createSVG(width, height) {
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    this.svg.setAttribute("width", "100%");
-    this.svg.setAttribute("height", "100%");
+    this.svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.svg.classList.add("circuit-svg");
 
     // Defs for glow filter and gradients
@@ -242,27 +243,99 @@ export class CircuitRenderer {
     `;
 
     this.svg.appendChild(g);
-    this.inputs[id] = { element: g, state, x, y };
+    this.inputs[id] = { element: g, state, x, y, kind: "switch" };
 
     g.addEventListener("click", () => {
-      this.toggleSwitch(id);
+      if (this.allowSwitchToggle && !this.allowSwitchToggle(id)) return;
+      this.toggleInput(id);
     });
 
     return id;
   }
 
+  /** Clickable logic pin (levels) — toggles 0/1 without a slide switch. */
+  drawLogicPin(id, x, y, label, initialState = false) {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("id", `pin-${id}`);
+    g.classList.add("circuit-pin");
+    g.style.cursor = "pointer";
+
+    const state = initialState;
+    const v = state ? "1" : "0";
+
+    g.innerHTML = `
+      <rect x="${x - 28}" y="${y - 28}" width="56" height="56" rx="10"
+            fill="var(--panel-bg)" stroke="var(--wire-off)" stroke-width="2"
+            class="pin-body-${id}"/>
+      <text x="${x}" y="${y - 8}" text-anchor="middle" fill="var(--text-bright)"
+            font-size="12" font-family="'Share Tech Mono', monospace"
+            font-weight="bold">${label}</text>
+      <text x="${x}" y="${y + 18}" text-anchor="middle" fill="${state ? "var(--wire-on)" : "var(--text-dim)"}"
+            font-size="18" font-family="'Share Tech Mono', monospace"
+            font-weight="bold" class="pin-val-${id}">${v}</text>
+    `;
+
+    this.svg.appendChild(g);
+    this.inputs[id] = { element: g, state, x, y, kind: "pin" };
+
+    g.addEventListener("click", () => {
+      if (this.allowSwitchToggle && !this.allowSwitchToggle(id)) return;
+      this.toggleInput(id);
+    });
+
+    return id;
+  }
+
+  /** Constant 0/1 source (circuit lab) — not in inputs map; value lives on the lab block. */
+  drawSignalSource(id, cx, cy, value) {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("id", `source-${id}`);
+    g.classList.add("circuit-source");
+    const v = value ? 1 : 0;
+    const fill = v ? "rgba(0, 255, 136, 0.12)" : "rgba(42, 53, 80, 0.4)";
+    const stroke = v ? "var(--wire-on)" : "var(--wire-off)";
+
+    g.innerHTML = `
+      <rect x="${cx - 20}" y="${cy - 18}" width="40" height="36" rx="8"
+            fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+      <text x="${cx}" y="${cy + 6}" text-anchor="middle" fill="${v ? "var(--wire-on)" : "var(--text-dim)"}"
+            font-size="20" font-family="'Share Tech Mono', monospace"
+            font-weight="bold">${v}</text>
+    `;
+
+    this.svg.appendChild(g);
+    return id;
+  }
+
   toggleSwitch(id) {
+    this.toggleInput(id);
+  }
+
+  toggleInput(id) {
     const sw = this.inputs[id];
     if (!sw) return;
     sw.state = !sw.state;
 
-    const track = sw.element.querySelector(`.switch-track-${id}`);
-    const knob = sw.element.querySelector(`.switch-knob-${id}`);
-    const val = sw.element.querySelector(`.switch-val-${id}`);
+    if (sw.kind === "pin") {
+      const body = sw.element.querySelector(`.pin-body-${id}`);
+      const val = sw.element.querySelector(`.pin-val-${id}`);
+      if (body) {
+        body.style.stroke = sw.state ? "var(--wire-on)" : "var(--wire-off)";
+        body.style.filter = sw.state ? "url(#glow-on)" : "none";
+      }
+      if (val) {
+        val.textContent = sw.state ? "1" : "0";
+        val.setAttribute("fill", sw.state ? "var(--wire-on)" : "var(--text-dim)");
+      }
+    } else {
+      const track = sw.element.querySelector(`.switch-track-${id}`);
+      const knob = sw.element.querySelector(`.switch-knob-${id}`);
+      const val = sw.element.querySelector(`.switch-val-${id}`);
 
-    if (track) track.setAttribute("fill", sw.state ? "var(--wire-on)" : "var(--switch-off)");
-    if (knob) knob.setAttribute("cx", sw.state ? sw.x + 8 : sw.x - 8);
-    if (val) val.textContent = sw.state ? "1" : "0";
+      if (track) track.setAttribute("fill", sw.state ? "var(--wire-on)" : "var(--switch-off)");
+      if (knob) knob.setAttribute("cx", sw.state ? sw.x + 8 : sw.x - 8);
+      if (val) val.textContent = sw.state ? "1" : "0";
+    }
 
     if (this.onInputChange) this.onInputChange(this.getInputStates());
   }
@@ -270,7 +343,7 @@ export class CircuitRenderer {
   setSwitchState(id, state) {
     const sw = this.inputs[id];
     if (!sw || sw.state === state) return;
-    this.toggleSwitch(id);
+    this.toggleInput(id);
   }
 
   // Draw an output LED

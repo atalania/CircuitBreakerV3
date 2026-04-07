@@ -19,6 +19,7 @@ export class UIManager {
       // HUD
       timerDisplay: document.getElementById("timer-display"),
       timerBar: document.getElementById("timer-bar"),
+      timerEyebrow: document.querySelector(".timer-eyebrow"),
       levelTitle: document.getElementById("level-title"),
       levelNumber: document.getElementById("level-number"),
       scoreDisplay: document.getElementById("score-display"),
@@ -41,7 +42,8 @@ export class UIManager {
       modalBtn2: document.getElementById("modal-btn-2"),
       // Menu
       startBtn: document.getElementById("start-btn"),
-      levelSelectBtns: document.querySelectorAll(".level-select-btn"),
+      circuitLabBtn: document.getElementById("circuit-lab-btn"),
+      levelSelectBtns: document.querySelectorAll(".level-select-btn:not(#circuit-lab-btn)"),
     };
   }
 
@@ -57,7 +59,30 @@ export class UIManager {
   }
 
   // ---- HUD updates ----
+  updateLabTimer() {
+    if (this.elements.timerEyebrow) {
+      this.elements.timerEyebrow.textContent = "INERT CHARGE — SANDBOX";
+    }
+    this.elements.timerDisplay.textContent = "LAB";
+    this.elements.timerDisplay.className = "timer-display timer-lab";
+    this.elements.timerBar.style.width = "100%";
+    this.elements.timerBar.className = "timer-bar timer-bar-lab";
+  }
+
+  updateEndlessTimer() {
+    if (this.elements.timerEyebrow) {
+      this.elements.timerEyebrow.textContent = "ENDLESS — AI BRIEF";
+    }
+    this.elements.timerDisplay.textContent = "∞";
+    this.elements.timerDisplay.className = "timer-display timer-lab";
+    this.elements.timerBar.style.width = "100%";
+    this.elements.timerBar.className = "timer-bar timer-bar-lab";
+  }
+
   updateTimer(timeRemaining, totalTime) {
+    if (this.elements.timerEyebrow) {
+      this.elements.timerEyebrow.textContent = "DETONATION FUSE";
+    }
     const mins = Math.floor(Math.max(0, timeRemaining) / 60);
     const secs = Math.floor(Math.max(0, timeRemaining) % 60);
     const ms = Math.floor((Math.max(0, timeRemaining) % 1) * 10);
@@ -86,7 +111,13 @@ export class UIManager {
   }
 
   updateLevelInfo(levelNum, title) {
-    this.elements.levelNumber.textContent = `MODULE ${levelNum}`;
+    if (levelNum === -1) {
+      this.elements.levelNumber.textContent = "ENDLESS RUN";
+    } else if (levelNum === 0) {
+      this.elements.levelNumber.textContent = "INERT CHARGE — LAB";
+    } else {
+      this.elements.levelNumber.textContent = `LIVE CHARGE ${String(levelNum).padStart(2, "0")}`;
+    }
     this.elements.levelTitle.textContent = title;
   }
 
@@ -103,8 +134,8 @@ export class UIManager {
     const msg = document.createElement("div");
     msg.className = `chat-message chat-${sender}`;
 
-    const avatar = sender === "tutor" ? "🤖" : "👤";
-    const name = sender === "tutor" ? "Prof. Circuit" : "You";
+    const avatar = sender === "tutor" ? "📋" : "🪖";
+    const name = sender === "tutor" ? "Ordnance Officer" : "You";
 
     msg.innerHTML = `
       <div class="chat-avatar">${avatar}</div>
@@ -127,9 +158,9 @@ export class UIManager {
         indicator.id = "thinking-indicator";
         indicator.className = "chat-message chat-tutor";
         indicator.innerHTML = `
-          <div class="chat-avatar">🤖</div>
+          <div class="chat-avatar">📋</div>
           <div class="chat-content">
-            <div class="chat-sender">Prof. Circuit</div>
+            <div class="chat-sender">Ordnance Officer</div>
             <div class="chat-text thinking-dots"><span>.</span><span>.</span><span>.</span></div>
           </div>
         `;
@@ -175,16 +206,16 @@ export class UIManager {
   showSuccessModal(score, timeBonus, callback, nextCallback = null) {
     const body = `
       <div class="modal-stats">
-        <div class="stat-row"><span>Module cleared</span><span class="stat-val">+100</span></div>
-        <div class="stat-row"><span>Time bonus</span><span class="stat-val">+${timeBonus}</span></div>
-        <div class="stat-row total"><span>Total score</span><span class="stat-val">${score}</span></div>
+        <div class="stat-row"><span>Charge neutralized</span><span class="stat-val">+100</span></div>
+        <div class="stat-row"><span>Fuse time bonus</span><span class="stat-val">+${timeBonus}</span></div>
+        <div class="stat-row total"><span>Diffusal score</span><span class="stat-val">${score}</span></div>
       </div>
-      <div class="modal-flavor">Module defused. The bomb is stabilized — for now.</div>
+      <div class="modal-flavor">Detonator chain broken. This package is cold — move to the next hot charge.</div>
     `;
     this.showModal(
-      "⚡ MODULE DEFUSED ⚡",
+      "💣 CHARGE DISARMED 💣",
       body,
-      nextCallback ? "NEXT MODULE" : "BACK TO MENU",
+      nextCallback ? "NEXT CHARGE" : "BACK TO BRIEFING",
       nextCallback || callback,
       nextCallback ? "MENU" : null,
       callback
@@ -194,11 +225,11 @@ export class UIManager {
   showFailModal(callback) {
     const body = `
       <div class="modal-flavor fail-text">
-        The timer hit zero. The circuit overloaded.<br/>
-        Analyze what went wrong and try again, recruit.
+        Fuse burned through. The charge cooked off — game over on this run.<br/>
+        Re-read the circuit plan and hit the timer again, sapper.
       </div>
     `;
-    this.showModal("💥 DETONATION 💥", body, "TRY AGAIN", callback, "MENU", null);
+    this.showModal("💥 DETONATION — PACKAGE HOT 💥", body, "RETRY CHARGE", callback, "MENU", null);
   }
 
   // ---- Effects ----

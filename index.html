@@ -12,14 +12,19 @@
        MENU SCREEN
        ============================================================ -->
   <div id="menu-screen" class="screen active">
+    <div class="menu-bomb-silhouette" aria-hidden="true"></div>
+    <div class="menu-hazard-edge menu-hazard-edge--top" aria-hidden="true"></div>
+    <div class="menu-hazard-edge menu-hazard-edge--bottom" aria-hidden="true"></div>
     <div class="menu-container">
+      <div class="menu-classification" aria-hidden="true">CLASSIFIED — LIVE ORDNANCE DRILL</div>
       <div class="menu-logo">CIRCUIT<br/>BREAKER</div>
-      <div class="menu-subtitle">Digital Logic Bomb Defusal Trainer</div>
+      <div class="menu-subtitle">Digital Logic · Bomb Defusal Simulator</div>
       <div class="menu-divider"></div>
       <div class="menu-description">
-        Disarm bombs by solving digital logic puzzles. Toggle switches, trace circuits, 
-        and beat the clock — with a live AI tutor guiding you through Boolean algebra, 
-        logic gates, latches, and flip-flops.
+        Every charge is a <strong>circuit lab</strong>: drag gates, pins, and wires on the canvas, then 
+        <strong>DISARM</strong> when the logic checks out. Campaign stages teach the detonation chain; 
+        <strong>Endless</strong> pulls fresh objectives from the AI key. The tutor still covers Boolean kits, 
+        SR/JK macros, and debugging dark LEDs.
       </div>
 
       <div class="level-grid">
@@ -43,9 +48,13 @@
           <span class="lvl-num">05</span>
           Bool Gauntlet
         </button>
+        <button class="level-select-btn lab-btn" type="button" id="circuit-lab-btn" data-mode="endless">
+          <span class="lvl-num">∞</span>
+          Endless (AI)
+        </button>
       </div>
 
-      <button class="start-btn" id="start-btn">▶ ENGAGE</button>
+      <button class="start-btn" id="start-btn">▶ ARM DEFUSAL RUN</button>
     </div>
   </div>
 
@@ -56,25 +65,27 @@
 
     <!-- HUD Bar -->
     <div class="hud-bar">
+      <div class="hud-bar-fuse-line" aria-hidden="true"></div>
       <div class="hud-left">
         <div>
-          <div class="level-number" id="level-number">MODULE 1</div>
+          <div class="level-number" id="level-number">LIVE CHARGE 01</div>
           <div class="level-title" id="level-title">GATE FUNDAMENTALS</div>
         </div>
       </div>
 
       <div class="hud-center">
         <div class="timer-container">
+          <div class="timer-eyebrow">DETONATION FUSE</div>
           <div class="timer-display" id="timer-display">02:00.0</div>
-          <div class="timer-bar-track">
+          <div class="timer-bar-track fuse-track">
             <div class="timer-bar" id="timer-bar"></div>
           </div>
         </div>
       </div>
 
       <div class="hud-right">
-        <div style="text-align:right">
-          <div class="score-label">SCORE</div>
+        <div class="hud-score-block">
+          <div class="score-label">DIFFUSAL SCORE</div>
           <div class="score-display" id="score-display">000000</div>
         </div>
         <button class="hud-btn" id="sound-toggle" title="Toggle Sound">🔊</button>
@@ -88,35 +99,40 @@
       <!-- Circuit Panel -->
       <div class="circuit-panel">
         <div class="objective-bar">
-          <span class="objective-icon">🎯</span>
+          <span class="objective-icon" aria-hidden="true">💣</span>
           <div>
-            <div class="objective-label">OBJECTIVE</div>
+            <div class="objective-label">DISARM CONDITION</div>
             <div id="objective-text">Set inputs to light up all outputs.</div>
           </div>
         </div>
 
         <div class="circuit-viewport">
+          <span class="viewport-corner viewport-corner--tl" aria-hidden="true"></span>
+          <span class="viewport-corner viewport-corner--tr" aria-hidden="true"></span>
+          <span class="viewport-corner viewport-corner--bl" aria-hidden="true"></span>
+          <span class="viewport-corner viewport-corner--br" aria-hidden="true"></span>
           <div id="circuit-container"></div>
         </div>
 
         <div class="action-bar">
-          <button class="action-btn" id="submit-btn">⚡ SUBMIT</button>
-          <button class="action-btn" id="reset-seq-btn">↺ RESET SEQ</button>
-          <button class="action-btn" id="hint-btn">💡 HINT</button>
+          <button class="action-btn" id="submit-btn">DISARM</button>
+          <button class="action-btn" id="reset-seq-btn">↺ REWIND FUSE</button>
+          <button class="action-btn" id="hint-btn">BOMB INTEL</button>
         </div>
       </div>
 
       <!-- Chat / Tutor Panel -->
       <div class="chat-panel" id="chat-panel">
+        <div class="chat-panel-hazard-strip" aria-hidden="true"></div>
         <div class="chat-header">
-          <span class="chat-header-icon">🤖</span>
-          <span class="chat-header-title">PROF. CIRCUIT</span>
-          <span class="chat-header-status">● ONLINE</span>
+          <span class="chat-header-icon">📋</span>
+          <span class="chat-header-title">ORDNANCE OFFICER</span>
+          <span class="chat-header-status">● LIVE FEED</span>
         </div>
         <div id="chat-messages"></div>
         <div class="chat-input-area">
-          <input type="text" id="chat-input" placeholder="Ask the professor..." autocomplete="off"/>
-          <button id="chat-send-btn">SEND</button>
+          <input type="text" id="chat-input" placeholder="Intel request about this charge..." autocomplete="off"/>
+          <button id="chat-send-btn">TRANSMIT</button>
         </div>
       </div>
 
@@ -128,7 +144,7 @@
        ============================================================ -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal-box">
-      <div class="modal-title" id="modal-title">LEVEL COMPLETE</div>
+      <div class="modal-title" id="modal-title">CHARGE DISARMED</div>
       <div class="modal-body" id="modal-body"></div>
       <div>
         <button class="modal-btn" id="modal-btn-1">CONTINUE</button>
