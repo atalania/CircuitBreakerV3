@@ -1,10 +1,10 @@
 // ============================================================
-//  TUTOR.JS — AI via portal POST /api/ai/openai (or local Vite middleware)
+//  TUTOR.JS — AI via portal proxy (see aiProxyClient.js for HTTP/route changes)
 // ============================================================
 
+import { getOpenAiAssistantText, postAiProxyChatCompletion } from "./aiProxyClient.js";
 import { randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
 
-const AI_URL = "/api/ai/openai";
 const DEFAULT_MODEL = "gpt-4o-mini";
 
 const ENDLESS_SYSTEM = `You are generating a digital-logic BUILD challenge for a circuit-lab sandbox.
@@ -27,33 +27,13 @@ async function callTutorApi(payload) {
 
   const model = (import.meta.env.VITE_OPENAI_MODEL || DEFAULT_MODEL).trim();
 
-  const response = await fetch(AI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: 1024,
-    }),
+  const data = await postAiProxyChatCompletion({
+    model,
+    messages,
+    max_tokens: 1024,
   });
 
-  let data = {};
-  try {
-    data = await response.json();
-  } catch {
-    /* ignore */
-  }
-
-  if (!response.ok) {
-    const err =
-      (typeof data?.error?.message === "string" && data.error.message) ||
-      (typeof data?.error === "string" && data.error) ||
-      response.statusText ||
-      "Request failed";
-    throw new Error(err);
-  }
-
-  const text = data.choices?.[0]?.message?.content?.trim() || "";
+  const text = getOpenAiAssistantText(data);
   if (!text) {
     throw new Error("Empty response from AI");
   }

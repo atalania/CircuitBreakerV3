@@ -14,6 +14,7 @@ import { Level4 } from "./levels/level4.js";
 import { Level5 } from "./levels/level5.js";
 import { CircuitLab, wirePath } from "./modules/circuitLab.js";
 import { evaluateWithPins, ensureInputPins, ledIdForLabel } from "./levels/labLevelUtils.js";
+import { sendAssistantGameEvent } from "./modules/portalAssistant.js";
 
 function isValidLabPlaceKind(kind) {
   if (!kind) return false;
@@ -58,6 +59,53 @@ class App {
     this._labBlockMoveRaf = null;
     /** @type {PointerEvent | null} */
     this._labLastPointerEvent = null;
+    /** @type {number} epoch ms — for portal assistant timeSpentSeconds */
+    this._levelPlayStartedAt = 0;
+  }
+
+  _portalLevelId() {
+    if (this.endlessMode) return "endless";
+    if (this.currentLevel) return `level-${this.currentLevel.id}`;
+    return "menu";
+  }
+
+  _portalTargetConcept() {
+    if (this.endlessMode) return "digital_logic_truth_table_lab";
+    if (!this.currentLevel) return "digital_logic";
+    switch (this.currentLevel.id) {
+      case 1:
+        return "logic_gates_and_or_not";
+      case 2:
+        return "xor_nand_truth_table";
+      case 3:
+        return "sr_latch_timing";
+      case 4:
+        return "jk_flipflop_clock_sequence";
+      case 5:
+        return "boolean_algebra_minterms";
+      default:
+        return "digital_logic";
+    }
+  }
+
+  _portalTimeSpentSeconds() {
+    if (!this._levelPlayStartedAt) return 0;
+    return Math.max(0, Math.floor((Date.now() - this._levelPlayStartedAt) / 1000));
+  }
+
+  /**
+   * @param {string} eventType
+   * @param {Record<string, unknown>} [extra]
+   */
+  _portalAssistantEvent(eventType, extra = {}) {
+    sendAssistantGameEvent({
+      levelId: this._portalLevelId(),
+      targetConcept: this._portalTargetConcept(),
+      eventType,
+      hintCount: this.engine.hintsUsed,
+      timeSpentSeconds: this._portalTimeSpentSeconds(),
+      ...extra,
+    });
   }
 
   init() {
@@ -190,6 +238,8 @@ class App {
     this._setupLevelUI();
 
     this.engine.startLevel(this.currentLevel.timeLimit);
+    this._levelPlayStartedAt = Date.now();
+    this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
 
     this.tutor.setLevelContext(this.currentLevel.tutorContext);
     this.tutor.getIntroMessage();
@@ -241,6 +291,8 @@ class App {
 
     const spec = await this.tutor.fetchEndlessChallenge();
     this.endlessSpec = spec;
+    this._levelPlayStartedAt = Date.now();
+    this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
     this.tutor.setLevelContext(
       `Endless mode: ${spec.title}. Student builds on the lab canvas with pins A,B,C and LED F. Objective: ${spec.objective} Truth table (F values for ABC keys): ${JSON.stringify(spec.table)}`
     );
@@ -614,10 +666,21 @@ class App {
     if (res.ok && res.pulseResult?.isComplete) {
       this.audio.playSuccess();
       this.ui.addChatMessage(res.message, "system");
+      const pr = res.pulseResult;
+      this._portalAssistantEvent("correct_submission", {
+        playerAnswer: pr ? `Q_sequence=${JSON.stringify(pr.achieved)}` : "jk_sequence_complete",
+        additionalContext: { campaignLevelComplete: true },
+      });
       setTimeout(() => this._levelComplete(), 600);
     } else if (res.pulseResult?.isFailed) {
       this.audio.playFail();
       this.ui.addChatMessage(res.message, "system");
+      const pr = res.pulseResult;
+      this._portalAssistantEvent("incorrect_submission", {
+        playerAnswer: pr ? `Q_sequence=${JSON.stringify(pr.achieved)}` : "",
+        correctAnswer: pr ? `target=${JSON.stringify(pr.target)}` : "",
+        mistakeCategory: "jk_sequence_diverged",
+      });
     } else if (res.message) {
       this.ui.addChatMessage(res.message, "system");
     }
@@ -918,6 +981,10 @@ class App {
         if (!this._srInvalidActive) {
           this._srInvalidActive = true;
           this.ui.addChatMessage(res.message || "Invalid SR inputs.", "system");
+          this._portalAssistantEvent("incorrect_submission", {
+            playerAnswer: res.message || "S=1 R=1",
+            mistakeCategory: "invalid_sr_inputs",
+          });
         }
         return;
       }
@@ -927,22 +994,49 @@ class App {
     if (level.id === 2 || level.id === 5) {
       const combo = res.combo ?? `${this.circuitLab.getPinValues().A ?? 0}${this.circuitLab.getPinValues().B ?? 0}${this.circuitLab.getPinValues().C ?? 0}`;
       const outputKey = level.id === 2 ? (res.q ?? 0) : (res.f ?? 0);
+      const outLabel = level.id === 2 ? "Q" : "F";
       const prog = res.progress || level.getProgress?.();
+      const a = parseInt(combo[0] ?? "0", 10) || 0;
+      const b = parseInt(combo[1] ?? "0", 10) || 0;
+      const c = parseInt(combo[2] ?? "0", 10) || 0;
+      const expectedOut = level.id === 2 ? level.expectedQ(a, b, c) : level.expectedF(a, b, c);
       this._updateTruthTableTracker(combo, outputKey, prog);
       if (res.truthFail) {
         this.audio.playFail();
         this.ui.addChatMessage(res.message || "Try again.", "system");
+        this._portalAssistantEvent("incorrect_submission", {
+          playerAnswer: `${outLabel}=${outputKey} @ ABC=${combo}`,
+          correctAnswer: `${outLabel}=${expectedOut} @ ABC=${combo}`,
+          mistakeCategory: "circuit_output_mismatch",
+        });
       } else if (res.partial) {
         this.audio.playSwitch();
         this.ui.flashCircuit();
         this.ui.addChatMessage(res.message || "", "system");
+        this._portalAssistantEvent("correct_submission", {
+          playerAnswer: `${outLabel}=${outputKey} @ ABC=${combo}`,
+          additionalContext: {
+            partialTruthTableRow: true,
+            found: prog?.found,
+            total: prog?.total,
+          },
+        });
       } else if (res.ok) {
         this.audio.playSuccess();
         this.ui.addChatMessage(res.message || "Cleared!", "system");
+        this._portalAssistantEvent("correct_submission", {
+          playerAnswer: `${outLabel}=${outputKey} @ ABC=${combo}`,
+          additionalContext: { campaignLevelComplete: true },
+        });
         setTimeout(() => this._levelComplete(), 700);
       } else {
         this.audio.playFail();
         this.ui.addChatMessage(res.message || "Not yet.", "system");
+        this._portalAssistantEvent("incorrect_submission", {
+          playerAnswer: `${outLabel}=${outputKey} @ ABC=${combo}`,
+          correctAnswer: `Need ${outLabel}=1 on a winning row`,
+          mistakeCategory: "not_winning_row",
+        });
       }
       return;
     }
@@ -952,6 +1046,10 @@ class App {
         this.audio.playSuccess();
         this.ui.flashCircuit();
         this.ui.addChatMessage(res.message || "", "system");
+        this._portalAssistantEvent("correct_submission", {
+          playerAnswer: "SR_sequence_complete",
+          additionalContext: { campaignLevelComplete: true },
+        });
         this._updateSrLatchTracker(4);
         setTimeout(() => this._levelComplete(), 700);
       } else {
@@ -960,8 +1058,16 @@ class App {
         if (res.advanced) {
           this.audio.playSuccess();
           this.ui.flashCircuit();
+          this._portalAssistantEvent("correct_submission", {
+            playerAnswer: `SR_step_verified`,
+            additionalContext: { srStep: res.step, partial: true },
+          });
         } else if (!res.srInvalid) {
           this.audio.playFail();
+          this._portalAssistantEvent("incorrect_submission", {
+            playerAnswer: res.message || "SR_step_incomplete",
+            mistakeCategory: "sr_sequence_mismatch",
+          });
         }
       }
       return;
@@ -972,10 +1078,18 @@ class App {
         this.audio.playSuccess();
         this.ui.flashCircuit();
         this.ui.addChatMessage(res.message || "", "system");
+        this._portalAssistantEvent("correct_submission", {
+          playerAnswer: "DISARM_pass_all_8_rows",
+          additionalContext: { campaignLevelComplete: true },
+        });
         setTimeout(() => this._levelComplete(), 700);
       } else {
         this.audio.playFail();
         this.ui.addChatMessage(res.message || "Not yet.", "system");
+        this._portalAssistantEvent("incorrect_submission", {
+          playerAnswer: res.message || "DISARM_fail",
+          mistakeCategory: "truth_table_mismatch",
+        });
         this._requestTutorFeedback({}, "submitted DISARM");
       }
     }
@@ -1007,6 +1121,11 @@ class App {
           if (got !== want) {
             this.audio.playFail();
             this.ui.addChatMessage(`Mismatch at ${key}: need F=${want}, circuit gives F=${got}.`, "system");
+            this._portalAssistantEvent("incorrect_submission", {
+              playerAnswer: `F=${got} @ ABC=${key}`,
+              correctAnswer: `F=${want} @ ABC=${key}`,
+              mistakeCategory: "truth_table_mismatch",
+            });
             return;
           }
         }
@@ -1016,6 +1135,11 @@ class App {
     this.audio.playSuccess();
     this.ui.flashCircuit();
     this.ui.addChatMessage("Truth table matches the AI brief — excellent work.", "system");
+    this._portalAssistantEvent("correct_submission", {
+      playerAnswer: "endless_truth_table_match",
+      additionalContext: { title: this.endlessSpec?.title },
+    });
+    this._portalAssistantEvent("level_complete");
     setTimeout(() => this._endlessRoundComplete(), 700);
   }
 
@@ -1045,6 +1169,8 @@ class App {
     if (this.engine.state !== GameState.PLAYING) return;
     this.engine.hintsUsed++;
     this.audio.playHint();
+
+    this._portalAssistantEvent("hint_request");
 
     const mode = this.endlessMode ? "endless" : "lab_level";
     const snapshot = this.circuitLab.briefDescribe();
@@ -1100,6 +1226,7 @@ class App {
 
   _levelComplete() {
     if (this.engine.state !== GameState.PLAYING) return;
+    this._portalAssistantEvent("level_complete");
     const timeBonus = Math.floor(this.engine.timeRemaining * 10);
     this.engine.completeLevel();
     this.audio.playSuccess();
@@ -1122,6 +1249,13 @@ class App {
   }
 
   _onTimeUp() {
+    this._portalAssistantEvent("timeout", {
+      additionalContext: {
+        endless: this.endlessMode,
+        campaignLevelId: this.currentLevel?.id ?? null,
+        labSummary: this.circuitLab ? this.circuitLab.briefDescribe() : null,
+      },
+    });
     this.audio.playFail();
     if (this.endlessMode) {
       this.ui.showFailModal(() => this._startEndless());
