@@ -9,5 +9,8 @@
   },
   "devDependencies": {
     "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "stem-assistant-bridge": "file:../../packages/stem-assistant-bridge"
   }
 }
