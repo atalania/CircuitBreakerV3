@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CircuitLab } from "./circuitLab.js";
+import { CircuitLab, getBlockPins, wirePath } from "./circuitLab.js";
 
 /** @param {CircuitLab} lab */
 function blockByKind(lab, kind) {
@@ -159,5 +159,114 @@ describe("CircuitLab.evaluate", () => {
     const b = lab.evaluate({}).outputs[led.id];
     expect(a).toBe(b);
     expect(a).toBe(0);
+  });
+});
+
+describe("getBlockPins / wirePath", () => {
+  it("returns expected ports for an AND gate", () => {
+    const b = { kind: "and", xl: 100, yc: 50 };
+    const pins = getBlockPins(b);
+    expect(pins.in0 && pins.in1 && pins.out).toBeTruthy();
+    expect(pins.out[0]).toBeGreaterThan(pins.in0[0]);
+  });
+
+  it("builds an orthogonal polyline between two points", () => {
+    const path = wirePath([0, 0], [100, 40]);
+    expect(path).toHaveLength(4);
+    expect(path[0]).toEqual([0, 0]);
+    expect(path[3]).toEqual([100, 40]);
+  });
+});
+
+describe("CircuitLab lifecycle", () => {
+  it("clear removes all blocks and wires", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 0, 0);
+    lab.placeAt("led", 50, 0);
+    const [hi] = blockByKind(lab, "source");
+    const [led] = blockByKind(lab, "led");
+    wire(lab, hi, "out", led, "in");
+    lab.clear();
+    expect(lab.blocks.length).toBe(0);
+    expect(lab.wires.length).toBe(0);
+  });
+
+  it("removeBlock drops incident wires", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 0, 0);
+    lab.placeAt("led", 50, 0);
+    const [hi] = blockByKind(lab, "source");
+    const [led] = blockByKind(lab, "led");
+    wire(lab, hi, "out", led, "in");
+    lab.removeBlock(hi.id);
+    expect(lab.wires.length).toBe(0);
+    expect(lab.blocks.some((b) => b.id === hi.id)).toBe(false);
+  });
+});
+
+describe("CircuitLab SR latch", () => {
+  it("sets Q high when S=1 and R=0, and flags srInvalid when S=R=1", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 10, 10);
+    lab.placeAt("low", 10, 50);
+    lab.placeAt("sr", 120, 30);
+    lab.placeAt("led", 220, 30);
+    const [hi, lo] = blockByKind(lab, "source");
+    const [sr] = blockByKind(lab, "sr");
+    const [led] = blockByKind(lab, "led");
+    wire(lab, hi, "out", sr, "inS");
+    wire(lab, lo, "out", sr, "inR");
+    wire(lab, sr, "outQ", led, "in");
+
+    expect(lab.evaluate({}).outputs[led.id]).toBe(1);
+    expect(lab.evaluate({}).srInvalid).toBe(false);
+
+    lab.clear();
+    lab.placeAt("high", 10, 10);
+    lab.placeAt("high", 10, 50);
+    lab.placeAt("sr", 120, 30);
+    lab.placeAt("led", 220, 30);
+    const [s0, s1] = blockByKind(lab, "source");
+    const [sr2] = blockByKind(lab, "sr");
+    const [led2] = blockByKind(lab, "led");
+    wire(lab, s0, "out", sr2, "inS");
+    wire(lab, s1, "out", sr2, "inR");
+    wire(lab, sr2, "outQ", led2, "in");
+    const r = lab.evaluate({});
+    expect(r.srInvalid).toBe(true);
+    expect(r.outputs[led2.id]).toBe(0);
+  });
+});
+
+describe("CircuitLab JK pulseJk", () => {
+  it("sets Q=1 when J=1 and K=0 after a clock pulse", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 10, 10);
+    lab.placeAt("low", 10, 50);
+    lab.placeAt("jk", 120, 30);
+    const [hi, lo] = blockByKind(lab, "source");
+    const [jk] = blockByKind(lab, "jk");
+    wire(lab, hi, "out", jk, "inJ");
+    wire(lab, lo, "out", jk, "inK");
+    expect(lab.pulseJk(jk.id)).toBe(true);
+    expect(jk._q).toBe(1);
+    expect(jk._qbar).toBe(0);
+  });
+
+  it("returns false for unknown JK id", () => {
+    const lab = new CircuitLab();
+    expect(lab.pulseJk("missing")).toBe(false);
+  });
+});
+
+describe("CircuitLab.toggleSource", () => {
+  it("toggles a labeled input pin value", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("in:A", 0, 0);
+    const [src] = blockByKind(lab, "source");
+    expect(src.value).toBe(0);
+    expect(lab.toggleSource(src.id)).toBe(true);
+    expect(src.value).toBe(1);
+    expect(lab.toggleSource("nope")).toBe(false);
   });
 });
