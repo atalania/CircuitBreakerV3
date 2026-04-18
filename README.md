@@ -1,56 +1,124 @@
+## CIRCUIT BREAKER💣 — Bomb Defusal Logic Trainer
+
+Circuit Breaker is a browser-based **digital logic bomb-defusal trainer**.  
+Each "live charge" is a self-contained circuit lab: drag gates and wires, reason about truth tables, and find the input pattern that disarms the bomb before the fuse burns down.
+
+The game runs as a small Vite app and ships with:
+- **5 campaign levels** that teach gate basics, truth tables, SR latches, JK flip-flops, and a final boolean logic gauntlet.
+- An **Endless (AI)** lab mode that can pull fresh practice objectives from an OpenAI model (optional).
+- An in-game **ordnance officer tutor** that can explain puzzles, give progressive hints, and generate new challenges when AI is configured.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** 18+ (LTS recommended)
+- **npm** (bundled with Node)
+
+### Install dependencies
+
+In the `CircuitGameVer2` directory:
+
+```bash
+npm install
+```
+
+### Run the dev server
+
+```bash
+npm run dev
+```
+
+Then open the URL printed in the terminal (usually `http://localhost:5173/`) in your browser.
+
+### Build for production
+
+```bash
+npm run build
+```
+
+Preview the built bundle with:
+
+```bash
+npm run preview
+```
+
+---
+
+## Gameplay Overview
+
+- **Menu**
+  - Choose from campaign levels **01–05** or the **Endless (AI)** circuit lab.
+  - Hit **"ARM DEFUSAL RUN"** to jump into the selected charge.
+
+- **HUD**
+  - **Level panel**: shows the current live charge and title.
+  - **Detonation fuse**: timer display and fuse bar; solve before it hits zero.
+  - **Diffusal score**: go for clean, fast clears.
+  - **Sound / Menu** buttons: toggle audio or return to the main menu.
+
+- **Circuit panel**
+  - The **objective bar** explains the current disarm condition.
+  - The **circuit viewport** hosts your gates, inputs, outputs, and wires.
+  - **Actions**:
+    - `DISARM`: submit your current configuration and check if the bomb is safe.
+    - `↺ REWIND FUSE`: reset timing / sequence as designed per level.
+    - `BOMB INTEL`: ask the tutor for a hint.
+
+- **Tutor / Chat panel**
+  - Type questions into the chat input (e.g. *"What does a JK flip-flop do here?"*).
+  - The ordnance officer replies with short, progressive hints, tying concepts back to the current circuit.
+
+---
+
+## Optional AI Features
+
+The AI-driven tutor and Endless mode use an OpenAI-compatible API via `aiProxyClient.js`.  
+You can either:
+
+- Configure a **local OpenAI key** in this repo, or
+- Run the game **embedded inside a portal** that provides the `/api/ai/openai` proxy.
+
+### Local OpenAI configuration
+
+1. Copy `.env.example` to `.env.local` in the project root.
+2. Set your key:
+
+   ```bash
+   OPENAI_API_KEY=sk-...
+   ```
+
+3. (Optional) Adjust models / proxy:
+   - `OPENAI_MODEL` — server-side model, e.g. `gpt-4o-mini`, `gpt-4o`.
+   - `VITE_OPENAI_MODEL` — model name sent from the browser to the proxy.
+   - `VITE_AI_PROXY_URL` — override the AI proxy route (default is `/api/ai/openai`).
+
+4. Restart `npm run dev` (or `npm run preview`) after editing `.env.local`.
+
+If the key or proxy is not configured, the tutor will automatically fall back to:
+- Pre-written intros and hints, and
+- Built-in endless challenges (no network required).
+
+---
+
+## Project Structure (High Level)
+
+- `index.html` — main HTML shell, menu, HUD, and layout containers.
+- `js/app.js` and `js/app/**/*.js` — core game logic, level overlays, lab tools.
+- `js/levels/` — scripted level definitions and objectives.
+- `js/modules/`
+  - `tutor.js` — AI tutor logic and endless challenge generation.
+  - `aiProxyClient.js` — HTTP client for the AI proxy endpoint.
+  - `audio.js`, `ui.js`, `circuits.js`, etc. — supporting modules.
+- `css/` — main styling and base resets/variables.
+- `.env.example` — environment variables template for AI features.
+
+---
+
+## Notes for Contributors
+
+- This repo uses **Vite** (see `package.json`) with a minimal dev setup.
+- Keep `.env.local` **out of version control**; never commit real API keys.
 <div align="center">
-
-# Project Title
-
-Project Description
-
-</div>
-
-
-## Overview
-
-Project details
-
-### Goals
-
-List main objectives, problems you aim to solve.
-
-### Features
-
-- [x] Feature 1
-- [x] Feature 2
-- [ ] Feature 3
-
-### Software Stack / Technologies Used
-
-- Language: ...
-- Framework: ...
-- Database: ...
-- etc...
-
-## Quickstart
-
-Summary for developers with links to setup, build, test instructions in wiki or docs.
-
-### Instructions
-
-1. Click "Use this template" on GitHub to create your private repository.
-2. Clone your repo locally.
-3. Fill in the metadata table above.
-4. Create an initial branch (e.g., `setup`), never commit directly to `main` (unless instructed).
-5. Open an Issue for each lab / feature before starting work.
-6. Use Pull Requests to merge changes (each PR should reference at least one Issue).
-
-## Structure
-
-Include: what constitutes passing (e.g., all tests green, coverage threshold).
-
-## Coding & Collaboration Conventions
-
-- Use semantic commit messages (see `CONTRIBUTING.md` for full details).
-- Open an Issue for every distinct unit of work (lab task, feature, bug, refactor, research).
-- Create branches from `main` named after the Issue: `<type>/short-kebab` (e.g., `feat/scheduler-phase1`).
-- Commit changes incrementally with semantic commit messages.
-- Open a Pull Request early (draft) and link the Issue.
-- Request peer review (if required) before merging.
-- Squash merge or rebase to keep `main` linear (unless told otherwise).
