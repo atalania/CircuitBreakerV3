@@ -10,6 +10,14 @@ import {
   stemAssistant,
 } from "stem-assistant-bridge";
 
+let bridgeInitialized = false;
+
+/** Opt-in via VITE_PORTAL_ASSISTANT=1 (e.g. Vitest / hub iframe). */
+export function isPortalAssistantActive() {
+  if (typeof window === "undefined") return false;
+  return import.meta.env.VITE_PORTAL_ASSISTANT === "1";
+}
+
 /** Slug must match src/data/games.ts iframe entry on the wiki. */
 export function getAssistantGameId() {
   const fromEnv = import.meta.env.VITE_ASSISTANT_GAME_ID;
@@ -28,13 +36,22 @@ export function initPortalAssistantBridge() {
     defaultTargetConcept: "digital_logic",
     targetOrigin: "*",
   });
+  bridgeInitialized = true;
+}
+
+function ensureBridgeInitialized() {
+  if (bridgeInitialized) return;
+  initPortalAssistantBridge();
 }
 
 /**
  * @param {Record<string, unknown>} eventData GameEvent fields; gameId defaults from game.json / env.
  */
 export function sendAssistantGameEvent(eventData) {
+  if (!isPortalAssistantActive()) return;
   if (!eventData || typeof eventData !== "object") return;
+
+  ensureBridgeInitialized();
 
   const payload = { ...eventData };
   const levelId =

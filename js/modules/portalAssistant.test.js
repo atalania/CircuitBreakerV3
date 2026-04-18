@@ -55,8 +55,9 @@ describe("portalAssistant", () => {
       hintCount: 1,
     });
 
-    expect(postMessage).toHaveBeenCalledTimes(1);
-    const [msg, target] = postMessage.mock.calls[0];
+    // initStemAssistantBridge posts level_start when embedded; then our event sends again
+    expect(postMessage).toHaveBeenCalledTimes(2);
+    const [msg, target] = postMessage.mock.calls[1];
     expect(msg.type).toBe("ASSISTANT_GAME_EVENT");
     expect(target).toBe("*");
     expect(msg.payload.eventType).toBe("level_start");

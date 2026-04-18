@@ -16,6 +16,6 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "stem-assistant-bridge": "file:../../packages/stem-assistant-bridge"
+    "stem-assistant-bridge": "file:../S26-CSE-335/packages/stem-assistant-bridge"
   }
 }
