@@ -1,26 +1,14 @@
 // ============================================================
-//  PORTAL ASSISTANT — STEM wiki Laurie/Livvy bridge (iframe postMessage)
-//  Contract: type "ASSISTANT_GAME_EVENT", payload matches GameEvent.
+//  PORTAL ASSISTANT — thin adapter over stem-assistant-bridge
 // ============================================================
 
 import gameData from "../../data/game.json";
-
-const MSG_TYPE = "ASSISTANT_GAME_EVENT";
-
-/**
- * True when the game should notify the parent portal (embedded iframe), or when
- * VITE_PORTAL_ASSISTANT=1 forces the bridge for local testing against a parent frame.
- */
-export function isPortalAssistantActive() {
-  if (typeof window === "undefined") return false;
-  if (import.meta.env.VITE_PORTAL_ASSISTANT === "0") return false;
-  if (import.meta.env.VITE_PORTAL_ASSISTANT === "1") return true;
-  try {
-    return window.self !== window.top;
-  } catch {
-    return true;
-  }
-}
+import {
+  initStemAssistantBridge,
+  setStemAssistantHintCount,
+  setStemAssistantLevel,
+  stemAssistant,
+} from "stem-assistant-bridge";
 
 /** Slug must match src/data/games.ts iframe entry on the wiki. */
 export function getAssistantGameId() {
@@ -31,27 +19,78 @@ export function getAssistantGameId() {
 }
 
 /**
+ * Initialize shared bridge once at startup.
+ */
+export function initPortalAssistantBridge() {
+  initStemAssistantBridge({
+    gameId: getAssistantGameId(),
+    defaultLevelId: "menu",
+    defaultTargetConcept: "digital_logic",
+    targetOrigin: "*",
+  });
+}
+
+/**
  * @param {Record<string, unknown>} eventData GameEvent fields; gameId defaults from game.json / env.
  */
 export function sendAssistantGameEvent(eventData) {
-  if (!isPortalAssistantActive()) return;
   if (!eventData || typeof eventData !== "object") return;
 
-  const gameId = getAssistantGameId();
-  const payload = {
-    gameId,
-    levelId: "menu",
-    eventType: "level_start",
-    targetConcept: "digital_logic",
-    hintCount: 0,
-    timeSpentSeconds: 0,
-    ...eventData,
-    gameId: typeof eventData.gameId === "string" && eventData.gameId.trim() ? eventData.gameId.trim() : gameId,
+  const payload = { ...eventData };
+  const levelId =
+    typeof payload.levelId === "string" && payload.levelId.trim()
+      ? payload.levelId.trim()
+      : "menu";
+  const targetConcept =
+    typeof payload.targetConcept === "string" && payload.targetConcept.trim()
+      ? payload.targetConcept.trim()
+      : "digital_logic";
+
+  setStemAssistantLevel(levelId, targetConcept);
+
+  if (typeof payload.hintCount === "number" && Number.isFinite(payload.hintCount)) {
+    setStemAssistantHintCount(payload.hintCount);
+  }
+
+  const extra = {
+    levelId,
+    targetConcept,
+    hintCount: typeof payload.hintCount === "number" ? payload.hintCount : undefined,
+    timeSpentSeconds:
+      typeof payload.timeSpentSeconds === "number" ? payload.timeSpentSeconds : undefined,
+    playerAnswer: typeof payload.playerAnswer === "string" ? payload.playerAnswer : undefined,
+    correctAnswer: typeof payload.correctAnswer === "string" ? payload.correctAnswer : undefined,
+    mistakeCategory:
+      typeof payload.mistakeCategory === "string" ? payload.mistakeCategory : undefined,
+    additionalContext:
+      payload.additionalContext && typeof payload.additionalContext === "object"
+        ? payload.additionalContext
+        : undefined,
   };
 
-  try {
-    window.parent.postMessage({ type: MSG_TYPE, payload }, "*");
-  } catch (e) {
-    console.warn("[portalAssistant] postMessage failed:", e);
+  switch (payload.eventType) {
+    case "level_start":
+      stemAssistant.levelStart(extra);
+      return;
+    case "incorrect_submission":
+      stemAssistant.incorrect(extra);
+      return;
+    case "correct_submission":
+      stemAssistant.correct(extra);
+      return;
+    case "hint_request":
+      stemAssistant.hintRequest(extra);
+      return;
+    case "level_complete":
+      stemAssistant.levelComplete(extra);
+      return;
+    case "timeout":
+      stemAssistant.timeout(extra);
+      return;
+    case "recap_request":
+      stemAssistant.recapRequest(extra);
+      return;
+    default:
+      console.warn("[portalAssistant] Unsupported eventType:", payload.eventType);
   }
 }
