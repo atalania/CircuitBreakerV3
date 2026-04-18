@@ -20,7 +20,9 @@ export function resolveAiProxyUrl() {
  * @returns {string}
  */
 export function getOpenAiAssistantText(data) {
-  return data?.choices?.[0]?.message?.content?.trim() || "";
+  const raw = data?.choices?.[0]?.message?.content;
+  if (typeof raw !== "string") return "";
+  return raw.trim() || "";
 }
 
 function sleep(ms) {
