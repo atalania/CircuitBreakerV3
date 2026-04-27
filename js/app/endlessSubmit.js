@@ -1,4 +1,5 @@
 import { GameState } from "../modules/engine.js";
+import { normalizeTruthTableForObjective } from "../modules/endlessChallenges.js";
 import { evaluateWithPins, ensureInputPins, ledIdForLabel } from "../levels/labLevelUtils.js";
 
 /**
@@ -19,7 +20,7 @@ export function submitEndlessRound(app) {
     return;
   }
 
-  const table = app.endlessSpec.table;
+  const table = normalizeTruthTableForObjective(app.endlessSpec.objective, app.endlessSpec.table);
   for (let a = 0; a <= 1; a++) {
     for (let b = 0; b <= 1; b++) {
       for (let c = 0; c <= 1; c++) {
