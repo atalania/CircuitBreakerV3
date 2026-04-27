@@ -3,14 +3,14 @@
 // ============================================================
 
 import { getOpenAiAssistantText, postAiProxyChatCompletion } from "./aiProxyClient.js";
-import { randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
+import { normalizeTruthTableForObjective, randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 
 const ENDLESS_SYSTEM = `You are generating a digital-logic BUILD challenge for a circuit-lab sandbox.
-Output ONLY valid JSON (no markdown fences, no commentary). Schema:
-{"title":"SHORT TITLE","objective":"1-2 sentences: player uses draggable pins A,B,C and LED F, wires AND/OR/NOT (and optionally XOR/NAND/NOR) gates.","table":{"000":{"F":0},"001":{"F":1},"010":{"F":0},"011":{"F":1},"100":{"F":0},"101":{"F":1},"110":{"F":0},"111":{"F":1}}}
-Rules: table must include all eight 3-bit keys. Each F is 0 or 1. Do not make F constant on every row. Prefer interesting but buildable functions (majority, mux, parity, etc.).`;
+Output ONLY valid JSON (no markdown fences, no commentary).
+Required JSON shape: {"title": string, "objective": string, "table": {"000": {"F": 0|1}, "001": {"F": 0|1}, "010": {"F": 0|1}, "011": {"F": 0|1}, "100": {"F": 0|1}, "101": {"F": 0|1}, "110": {"F": 0|1}, "111": {"F": 0|1}}}
+Rules: table must include all eight 3-bit keys. Each F is 0 or 1. Do not make F constant on every row. Prefer interesting but buildable functions (majority, mux, parity, etc.). If the objective says majority, at least two inputs high, or two or more inputs high, the table must be 000=0, 001=0, 010=0, 011=1, 100=0, 101=1, 110=1, 111=1.`;
 
 async function callTutorApi(payload) {
   /** @type {{ role: string, content: string }[]} */
@@ -183,9 +183,10 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
       const table = raw.table && typeof raw.table === "object" ? raw.table : null;
 
       if (!validateTruthTable(table)) throw new Error("Invalid or incomplete truth table");
+      const normalizedTable = normalizeTruthTableForObjective(objective, table);
 
       this._setThinking(false);
-      return { title, objective, table };
+      return { title, objective, table: normalizedTable };
     } catch (err) {
       console.error("Endless objective error:", err);
       this._setThinking(false);

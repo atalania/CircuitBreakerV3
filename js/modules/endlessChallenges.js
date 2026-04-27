@@ -34,8 +34,25 @@ const POOL = [
   },
 ];
 
+function isMajorityObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bmajority\b/.test(text) || /\bat least\s+two\b/.test(text) || /\btwo or more\b/.test(text);
+}
+
 export function randomFallbackChallenge() {
   return { ...POOL[Math.floor(Math.random() * POOL.length)] };
+}
+
+/**
+ * Keep generated copy and verification aligned for common natural-language briefs.
+ * @param {string} objective
+ * @param {Record<string, { F: number }>} table
+ */
+export function normalizeTruthTableForObjective(objective, table) {
+  if (isMajorityObjective(objective)) {
+    return tableFromFn((a, b, c) => a + b + c >= 2);
+  }
+  return table;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
+import { normalizeTruthTableForObjective, randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
 
 describe("validateTruthTable", () => {
   it("returns false for non-objects or missing rows", () => {
@@ -45,5 +45,34 @@ describe("randomFallbackChallenge", () => {
     expect(ch.objective).toBeTruthy();
     expect(validateTruthTable(ch.table)).toBe(true);
     vi.restoreAllMocks();
+  });
+});
+
+describe("normalizeTruthTableForObjective", () => {
+  it("uses a majority table when the objective says at least two inputs are high", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: c };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective(
+      "Player wires gates so F=1 when at least two of the inputs are high.",
+      wrongTable
+    );
+
+    expect(table).toEqual({
+      "000": { F: 0 },
+      "001": { F: 0 },
+      "010": { F: 0 },
+      "011": { F: 1 },
+      "100": { F: 0 },
+      "101": { F: 1 },
+      "110": { F: 1 },
+      "111": { F: 1 },
+    });
   });
 });

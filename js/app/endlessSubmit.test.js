@@ -85,6 +85,58 @@ describe("submitEndlessRound with wired F", () => {
     );
     expect(app._portalAssistantEvent).toHaveBeenCalledWith("level_complete");
   });
+
+  it("passes a majority circuit when AI copy says at least two inputs are high", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("in:A", 10, 10);
+    lab.placeAt("in:B", 10, 40);
+    lab.placeAt("in:C", 10, 70);
+    lab.placeAt("and", 100, 20);
+    lab.placeAt("and", 100, 60);
+    lab.placeAt("and", 100, 100);
+    lab.placeAt("or", 220, 40);
+    lab.placeAt("or", 340, 70);
+    lab.placeAt("led:F", 460, 70);
+
+    const pinA = lab.blocks.find((b) => b.kind === "source" && b.pin === "A");
+    const pinB = lab.blocks.find((b) => b.kind === "source" && b.pin === "B");
+    const pinC = lab.blocks.find((b) => b.kind === "source" && b.pin === "C");
+    const [andAB, andAC, andBC] = lab.blocks.filter((b) => b.kind === "and");
+    const [orLeft, orRight] = lab.blocks.filter((b) => b.kind === "or");
+    const ledF = lab.findLedByLabel("F");
+
+    wire(lab, pinA, "out", andAB, "in0");
+    wire(lab, pinB, "out", andAB, "in1");
+    wire(lab, pinA, "out", andAC, "in0");
+    wire(lab, pinC, "out", andAC, "in1");
+    wire(lab, pinB, "out", andBC, "in0");
+    wire(lab, pinC, "out", andBC, "in1");
+    wire(lab, andAB, "out", orLeft, "in0");
+    wire(lab, andAC, "out", orLeft, "in1");
+    wire(lab, orLeft, "out", orRight, "in0");
+    wire(lab, andBC, "out", orRight, "in1");
+    wire(lab, orRight, "out", ledF, "in");
+
+    const app = appWithLab(lab, {
+      endlessSpec: {
+        title: "MAJORITY",
+        objective: "Player uses draggable pins A, B, C and LED F to output 1 when at least two inputs are high.",
+        table: {
+          "000": { F: 0 },
+          "001": { F: 1 },
+          "010": { F: 0 },
+          "011": { F: 1 },
+          "100": { F: 0 },
+          "101": { F: 1 },
+          "110": { F: 0 },
+          "111": { F: 1 },
+        },
+      },
+    });
+    submitEndlessRound(app);
+    expect(app.audio.playSuccess).toHaveBeenCalled();
+    expect(app.audio.playFail).not.toHaveBeenCalled();
+  });
 });
 
 describe("showEndlessRoundComplete", () => {
