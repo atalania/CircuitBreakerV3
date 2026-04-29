@@ -11,9 +11,10 @@ export function processCampaignLabSubmit(app, res) {
 
   if (level.id === 3) {
     if (res.srInvalid && !res.ok) {
+      app.audio.playFail();
+      app.ui.addChatMessage(res.message || "Invalid SR inputs.", "system");
       if (!app._srInvalidActive) {
         app._srInvalidActive = true;
-        app.ui.addChatMessage(res.message || "Invalid SR inputs.", "system");
         app._portalAssistantEvent("incorrect_submission", {
           playerAnswer: res.message || "S=1 R=1",
           mistakeCategory: "invalid_sr_inputs",
@@ -35,7 +36,7 @@ export function processCampaignLabSubmit(app, res) {
     const b = parseInt(combo[1] ?? "0", 10) || 0;
     const c = parseInt(combo[2] ?? "0", 10) || 0;
     const expectedOut = level.id === 2 ? level.expectedQ(a, b, c) : level.expectedF(a, b, c);
-    app._updateTruthTableTracker(combo, outputKey, prog);
+    app._updateTruthTableTracker(combo, outputKey, prog, expectedOut);
     if (res.truthFail) {
       app.audio.playFail();
       app.ui.addChatMessage(res.message || "Try again.", "system");
@@ -57,6 +58,7 @@ export function processCampaignLabSubmit(app, res) {
         },
       });
     } else if (res.ok) {
+      app.engine.freezeTimer();
       app.audio.playSuccess();
       app.ui.addChatMessage(res.message || "Cleared!", "system");
       app._portalAssistantEvent("correct_submission", {
@@ -78,6 +80,7 @@ export function processCampaignLabSubmit(app, res) {
 
   if (level.id === 3) {
     if (res.ok) {
+      app.engine.freezeTimer();
       app.audio.playSuccess();
       app.ui.flashCircuit();
       app.ui.addChatMessage(res.message || "", "system");
@@ -110,6 +113,7 @@ export function processCampaignLabSubmit(app, res) {
 
   if (level.id === 1) {
     if (res.ok) {
+      app.engine.freezeTimer();
       app.audio.playSuccess();
       app.ui.flashCircuit();
       app.ui.addChatMessage(res.message || "", "system");

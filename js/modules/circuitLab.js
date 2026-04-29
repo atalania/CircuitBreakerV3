@@ -227,9 +227,9 @@ export class CircuitLab {
     for (const w of this.wires) {
       inDep[w.toKey] = w.fromKey;
     }
-    const value = {};
     const blockById = Object.fromEntries(this.blocks.map((x) => [x.id, x]));
     const inputStates = {};
+    const value = this._settleGateValues(inDep, inputStates, blockById);
     const J = inDep[`${b.id}:inJ`] ? this._readValue(inDep[`${b.id}:inJ`], value, inputStates, blockById) : 0;
     const K = inDep[`${b.id}:inK`] ? this._readValue(inDep[`${b.id}:inK`], value, inputStates, blockById) : 0;
 
@@ -400,6 +400,31 @@ export class CircuitLab {
 
   hideWirePreview(renderer) {
     this.setWirePreviewPath(renderer, null);
+  }
+
+  /**
+   * Settle combinational gate outputs into a value map. Used both by full
+   * evaluate() and by pulseJk() so JK clock samples reflect upstream gates.
+   */
+  _settleGateValues(inDep, inputStates, blockById) {
+    /** @type {Record<string, number>} */
+    const value = {};
+    const gateOrder = this.blocks.filter((b2) =>
+      ["and", "or", "not", "xor", "nand", "nor"].includes(b2.kind)
+    );
+    const maxIt = gateOrder.length + this.wires.length + 8;
+    for (let it = 0; it < maxIt; it++) {
+      let changed = false;
+      for (const b of gateOrder) {
+        const v = this._gateEval(b, inDep, value, inputStates, blockById);
+        if (value[b.id] !== v) {
+          value[b.id] = v;
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+    return value;
   }
 
   _gateEval(b, inDep, value, inputStates, blockById) {

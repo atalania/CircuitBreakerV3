@@ -57,6 +57,17 @@ export const Level4 = {
     const jk = lab.blocks.find((b) => b.id === jkId && b.kind === "jk");
     if (!jk) return { ok: false, message: "JK module missing.", pulseResult: null };
 
+    const ledQ = lab.findLedByLabel("Q");
+    if (!ledQ) {
+      return { ok: false, message: "Add LED Q and wire JK outQ to it before pulsing.", pulseResult: null };
+    }
+    const wiredFromOutQ = lab.wires.some(
+      (w) => w.toKey === `${ledQ.id}:in` && w.fromKey === `${jk.id}:outQ`
+    );
+    if (!wiredFromOutQ) {
+      return { ok: false, message: "Wire JK outQ to LED Q so the readout reflects the flip-flop.", pulseResult: null };
+    }
+
     lab.pulseJk(jkId);
     evaluateWithPins(lab, lab.getPinValues());
 

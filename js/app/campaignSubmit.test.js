@@ -6,7 +6,7 @@ import { processCampaignLabSubmit } from "./campaignSubmit.js";
 function baseApp(overrides = {}) {
   return {
     currentLevel: { id: 1 },
-    engine: { state: GameState.PLAYING },
+    engine: { state: GameState.PLAYING, freezeTimer: vi.fn() },
     circuitLab: { getPinValues: () => ({ A: 0, B: 0, C: 0 }) },
     audio: {
       playSuccess: vi.fn(),
@@ -46,6 +46,7 @@ describe("processCampaignLabSubmit", () => {
     const app = baseApp();
     processCampaignLabSubmit(app, { ok: true, message: "cleared" });
     expect(app.audio.playSuccess).toHaveBeenCalled();
+    expect(app.engine.freezeTimer).toHaveBeenCalled();
     expect(app._portalAssistantEvent).toHaveBeenCalled();
     vi.advanceTimersByTime(800);
     expect(app._levelComplete).toHaveBeenCalled();
@@ -58,14 +59,18 @@ describe("processCampaignLabSubmit", () => {
     expect(app._requestTutorFeedback).toHaveBeenCalled();
   });
 
-  it("level 3: srInvalid debounces portal events until cleared", () => {
+  it("level 3: srInvalid debounces portal events but keeps giving audio/chat feedback", () => {
     const app = baseApp({ currentLevel: { id: 3 } });
     processCampaignLabSubmit(app, { ok: false, srInvalid: true, message: "bad sr" });
     expect(app._srInvalidActive).toBe(true);
     expect(app._portalAssistantEvent).toHaveBeenCalledTimes(1);
+    expect(app.audio.playFail).toHaveBeenCalledTimes(1);
+    expect(app.ui.addChatMessage).toHaveBeenCalledTimes(1);
 
     processCampaignLabSubmit(app, { ok: false, srInvalid: true, message: "bad sr" });
     expect(app._portalAssistantEvent).toHaveBeenCalledTimes(1);
+    expect(app.audio.playFail).toHaveBeenCalledTimes(2);
+    expect(app.ui.addChatMessage).toHaveBeenCalledTimes(2);
   });
 
   it("level 2: truthFail plays fail and emits mismatch context", () => {
@@ -99,6 +104,24 @@ describe("processCampaignLabSubmit", () => {
     expect(app._portalAssistantEvent).toHaveBeenCalledWith(
       "correct_submission",
       expect.objectContaining({ additionalContext: expect.objectContaining({ partialTruthTableRow: true }) })
+    );
+  });
+
+  it("level 2: passes the expected truth-table value through to the tracker", () => {
+    const app = baseApp({ currentLevel: Level2 });
+    processCampaignLabSubmit(app, {
+      ok: false,
+      partial: true,
+      combo: "000",
+      q: 1,
+      message: "row logged",
+      progress: { found: 1, total: 6 },
+    });
+    expect(app._updateTruthTableTracker).toHaveBeenCalledWith(
+      "000",
+      1,
+      expect.any(Object),
+      Level2.expectedQ(0, 0, 0)
     );
   });
 });

@@ -76,6 +76,18 @@ export const Level5 = {
     const found = this._foundCombos.size;
     const total = this._requiredCombos.size;
     if (found >= total) {
+      const mismatch = this._fullTableMismatch(lab, idF);
+      if (mismatch) {
+        this._foundCombos.delete(combo);
+        return {
+          ok: false,
+          message: `All minterms logged, but at A=${mismatch.a} B=${mismatch.b} C=${mismatch.c} the circuit gives F=${mismatch.got} instead of F=${mismatch.want}. Build the real Boolean expression.`,
+          progress: this._progressSnapshot(),
+          combo,
+          f,
+          truthFail: true,
+        };
+      }
       return { ok: true, message: "All minterms found — gauntlet cleared.", progress: this._progressSnapshot(), combo, f };
     }
     return {
@@ -85,6 +97,26 @@ export const Level5 = {
       combo,
       partial: true,
     };
+  },
+
+  /**
+   * Sweep the 8 ABC combos and return the first row whose live circuit output
+   * disagrees with expectedF, or null if the truth table matches.
+   * @param {import('../modules/circuitLab.js').CircuitLab} lab
+   * @param {string} ledId
+   */
+  _fullTableMismatch(lab, ledId) {
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          const r = evaluateWithPins(lab, { A: a, B: b, C: c });
+          const got = r.outputs[ledId] ?? 0;
+          const want = this.expectedF(a, b, c);
+          if (got !== want) return { a, b, c, got, want };
+        }
+      }
+    }
+    return null;
   },
 
   _progressSnapshot() {

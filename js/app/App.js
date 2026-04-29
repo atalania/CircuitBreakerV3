@@ -65,7 +65,7 @@ export class App {
       getEngineState: () => this.engine.state,
       playSwitch: () => this.audio.playSwitch(),
       onInputChange: (states) => this._onInputChange(states),
-      updateTruthTableTracker: (combo, v, prog) => this._updateTruthTableTracker(combo, v, prog),
+      updateTruthTableTracker: (combo, v, prog, expected) => this._updateTruthTableTracker(combo, v, prog, expected),
       onJkPulse: (id) => handleJkPulse(this, id),
       afterRedraw: () => {
         if (this.currentLevel?.id === 1) refreshLevel1CoachFromDom(this.circuitLab);
@@ -325,8 +325,46 @@ export class App {
       addSystemMessage: (text) => this.ui.addChatMessage(text, "system"),
       Level1,
       afterClearLevel4: () => Level4.primeLab(this.circuitLab),
+      afterCanvasClear: (cur) => this._afterCanvasClear(cur),
     });
     this._labUiTeardown = tb;
+  }
+
+  /**
+   * Run after the toolbar Clear button wipes the canvas. Resets level
+   * progress and the matching on-screen tracker so a fresh build does not
+   * inherit stale state.
+   * @param {{ id: number } | null} cur
+   */
+  _afterCanvasClear(cur) {
+    cur?.resetProgress?.();
+    if (cur?.id === 2 || cur?.id === 5) {
+      const tracker = document.getElementById("tt-tracker");
+      if (tracker) {
+        tracker.querySelectorAll(".tt-row").forEach((row) => {
+          row.classList.remove("found", "wrong");
+          const out = row.querySelector(".tt-output");
+          const chk = row.querySelector(".tt-check");
+          if (out) out.textContent = "?";
+          if (chk) chk.textContent = "—";
+        });
+        const prog = tracker.querySelector("#tt-progress");
+        const total = cur.id === 2 ? 6 : 4;
+        if (prog) prog.textContent = `0 / ${total} found`;
+      }
+    }
+    if (cur?.id === 3) {
+      updateSrLatchTracker(0);
+    }
+    if (cur?.id === 4) {
+      const seqContainer = document.getElementById("seq-achieved");
+      if (seqContainer) {
+        seqContainer.querySelectorAll(".seq-val").forEach((v) => {
+          v.textContent = "_";
+          v.classList.remove("match", "miss", "filled");
+        });
+      }
+    }
   }
 
   _labRedraw() {
@@ -441,7 +479,6 @@ export class App {
     this._portalAssistantEvent("level_complete");
     const timeBonus = Math.floor(this.engine.timeRemaining * 10);
     this.engine.completeLevel();
-    this.audio.playSuccess();
 
     const hasNext = this.engine.currentLevelIndex < this.levels.length - 1;
     this.ui.showSuccessModal(
@@ -497,8 +534,8 @@ export class App {
     this.ui.updateScore(this.engine.score);
   }
 
-  _updateTruthTableTracker(combo, outputVal, progress) {
-    updateTruthTableTrackerDom(combo, outputVal, progress);
+  _updateTruthTableTracker(combo, outputVal, progress, expected) {
+    updateTruthTableTrackerDom(combo, outputVal, progress, expected);
   }
 
   _updateSequenceTracker(result) {

@@ -304,8 +304,11 @@ export function updateSequenceTrackerDom(result) {
  * @param {any} combo
  * @param {any} outputVal
  * @param {any} progress
+ * @param {number} [expected] expected truth-table value for this row (0 or 1).
+ *   When omitted, falls back to the legacy "1 means good, 0 means wrong"
+ *   behavior used before per-row expectations were threaded through.
  */
-export function updateTruthTableTrackerDom(combo, outputVal, progress) {
+export function updateTruthTableTrackerDom(combo, outputVal, progress, expected) {
   const tracker = document.getElementById("tt-tracker");
   if (!tracker) return;
 
@@ -315,11 +318,17 @@ export function updateTruthTableTrackerDom(combo, outputVal, progress) {
     const check = row.querySelector(".tt-check");
     output.textContent = outputVal;
 
-    if (progress && outputVal === 1 && progress.foundSet && progress.foundSet.has(combo)) {
+    const hasExpected = expected === 0 || expected === 1;
+    const matches = hasExpected ? outputVal === expected : outputVal === 1;
+    const found = !!(progress && progress.foundSet && progress.foundSet.has(combo));
+
+    row.classList.remove("wrong");
+    if (matches && found) {
       row.classList.add("found");
-      row.classList.remove("wrong");
       check.textContent = "✓";
-    } else if (outputVal === 0) {
+    } else if (matches) {
+      check.textContent = hasExpected && expected === 0 ? "—" : "?";
+    } else {
       row.classList.add("wrong");
       check.textContent = "✗";
       setTimeout(() => row.classList.remove("wrong"), 1000);

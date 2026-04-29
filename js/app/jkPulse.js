@@ -13,6 +13,7 @@ export function handleJkPulse(app, jkId) {
   app._labRedraw();
 
   if (res.ok && res.pulseResult?.isComplete) {
+    app.engine.freezeTimer();
     app.audio.playSuccess();
     app.ui.addChatMessage(res.message, "system");
     const pr = res.pulseResult;

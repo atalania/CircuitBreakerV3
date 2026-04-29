@@ -257,6 +257,25 @@ describe("CircuitLab JK pulseJk", () => {
     const lab = new CircuitLab();
     expect(lab.pulseJk("missing")).toBe(false);
   });
+
+  it("samples J via an upstream NOT gate (combinational logic settles before clock)", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("low", 10, 10);
+    lab.placeAt("low", 10, 50);
+    lab.placeAt("not", 80, 10);
+    lab.placeAt("jk", 200, 30);
+    const sources = blockByKind(lab, "source");
+    const lowJ = sources[0];
+    const lowK = sources[1];
+    const [gnot] = blockByKind(lab, "not");
+    const [jk] = blockByKind(lab, "jk");
+    wire(lab, lowJ, "out", gnot, "in");
+    wire(lab, gnot, "out", jk, "inJ");
+    wire(lab, lowK, "out", jk, "inK");
+
+    expect(lab.pulseJk(jk.id)).toBe(true);
+    expect(jk._q).toBe(1);
+  });
 });
 
 describe("CircuitLab.toggleSource", () => {

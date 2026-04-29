@@ -17,17 +17,30 @@ export function ensureInputPins(lab, letters) {
 }
 
 /**
- * Apply pin values to lab sources, then evaluate.
+ * Apply pin values to lab sources, evaluate, and restore the original pin
+ * values so an exhaustive truth-table sweep does not leave the canvas stuck
+ * on the last tested combo.
  * @param {import('../modules/circuitLab.js').CircuitLab} lab
  * @param {Record<string, number>} pins e.g. { A:1, B:0, C:1 }
  */
 export function evaluateWithPins(lab, pins) {
+  /** @type {Record<string, number>} */
+  const previous = {};
   for (const b of lab.blocks) {
     if (b.kind === "source" && b.pin && Object.prototype.hasOwnProperty.call(pins, b.pin)) {
+      previous[b.id] = b.value;
       b.value = pins[b.pin] ? 1 : 0;
     }
   }
-  return lab.evaluate({});
+  try {
+    return lab.evaluate({});
+  } finally {
+    for (const b of lab.blocks) {
+      if (Object.prototype.hasOwnProperty.call(previous, b.id)) {
+        b.value = previous[b.id];
+      }
+    }
+  }
 }
 
 /**

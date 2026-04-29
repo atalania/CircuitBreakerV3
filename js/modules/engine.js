@@ -55,6 +55,14 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Halt the countdown without changing PLAYING state. Used to freeze the fuse
+   * after a winning submission while the success modal is being scheduled.
+   */
+  freezeTimer() {
+    this._stopTimer();
+  }
+
   pause() {
     this.isPaused = true;
     this.state = GameState.PAUSED;

@@ -36,7 +36,7 @@ describe("handleJkPulse", () => {
     });
 
     const app = {
-      engine: { state: GameState.PLAYING },
+      engine: { state: GameState.PLAYING, freezeTimer: vi.fn() },
       currentLevel: { id: 4 },
       audio: { playClock: vi.fn(), playSuccess: vi.fn() },
       ui: { addChatMessage: vi.fn() },
@@ -49,6 +49,7 @@ describe("handleJkPulse", () => {
 
     handleJkPulse(app, "lab_jk_1");
     expect(app.audio.playSuccess).toHaveBeenCalled();
+    expect(app.engine.freezeTimer).toHaveBeenCalled();
     vi.advanceTimersByTime(650);
     expect(app._levelComplete).toHaveBeenCalled();
   });

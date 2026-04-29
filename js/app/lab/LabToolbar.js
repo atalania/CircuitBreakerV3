@@ -11,6 +11,7 @@ import { svgClientToSvg } from "./svgClientToSvg.js";
  * @property {(text: string) => void} addSystemMessage
  * @property {any} Level1 — level1 module (setupLab on canvas reset)
  * @property {() => void} [afterClearLevel4]
+ * @property {(cur: { id: number } | null) => void} [afterCanvasClear]
  */
 
 /**
@@ -107,12 +108,13 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
         lab.tool = null;
         bar.querySelectorAll(".lab-tool").forEach((b) => b.classList.remove("active"));
         const cur = host.getCurrentLevel();
+        host.afterCanvasClear?.(cur);
         if (cur?.id === 1) {
           const { Level1 } = host;
           Level1.setupLab(lab);
           host.addSystemMessage("Canvas reset to the tutorial layout (inputs left, LEDs right).");
         } else {
-          host.addSystemMessage("Canvas cleared.");
+          host.addSystemMessage("Canvas cleared — progress for this charge has been reset.");
         }
         host.onLabChanged();
         if (cur?.id === 4) host.afterClearLevel4?.();

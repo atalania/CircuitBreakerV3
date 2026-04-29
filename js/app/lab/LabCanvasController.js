@@ -13,7 +13,7 @@ import { svgClientToSvg } from "./svgClientToSvg.js";
  * @property {() => number} getEngineState
  * @property {() => void} playSwitch
  * @property {(states: any) => void} [onInputChange]
- * @property {(combo: string, outputVal: number, progress: any) => void} updateTruthTableTracker
+ * @property {(combo: string, outputVal: number, progress: any, expected?: number) => void} updateTruthTableTracker
  * @property {(jkId: string) => void} onJkPulse
  * @property {() => void} [afterRedraw]
  * @property {() => void} onLabChanged
@@ -150,7 +150,16 @@ export class LabCanvasController {
                   C: pins.C ?? 0,
                 });
                 const v = r.outputs[led.id] ?? 0;
-                this.host.updateTruthTableTracker(combo, v, cur.getProgress?.() || null);
+                const a = pins.A ?? 0;
+                const b = pins.B ?? 0;
+                const c = pins.C ?? 0;
+                const expected = cur.id === 2 ? cur.expectedQ?.(a, b, c) : cur.expectedF?.(a, b, c);
+                this.host.updateTruthTableTracker(
+                  combo,
+                  v,
+                  cur.getProgress?.() || null,
+                  typeof expected === "number" ? expected : undefined
+                );
               }
             }
           }

@@ -71,6 +71,17 @@ describe("GameEngine", () => {
     expect(engine.timeRemaining).toBe(t);
   });
 
+  it("freezeTimer halts countdown without leaving PLAYING state", () => {
+    const engine = new GameEngine();
+    engine.startLevel(10);
+    vi.advanceTimersByTime(100);
+    const mid = engine.timeRemaining;
+    engine.freezeTimer();
+    expect(engine.state).toBe(GameState.PLAYING);
+    vi.advanceTimersByTime(500);
+    expect(engine.timeRemaining).toBe(mid);
+  });
+
   it("nextLevel increments index and resets hints", () => {
     const engine = new GameEngine();
     engine.currentLevelIndex = 2;

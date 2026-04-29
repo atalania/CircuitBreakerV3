@@ -75,6 +75,18 @@ export const Level2 = {
     const found = this._foundCombos.size;
     const total = this._requiredCombos.size;
     if (found >= total) {
+      const mismatch = this._fullTableMismatch(lab, led.id);
+      if (mismatch) {
+        this._foundCombos.delete(combo);
+        return {
+          ok: false,
+          message: `All winning rows logged, but at A=${mismatch.a} B=${mismatch.b} C=${mismatch.c} the circuit gives Q=${mismatch.got} instead of Q=${mismatch.want}. Build a real circuit, not a shortcut.`,
+          progress: this._progressSnapshot(),
+          combo,
+          q,
+          truthFail: true,
+        };
+      }
       return { ok: true, message: "All valid rows found — truth table cleared.", progress: this._progressSnapshot(), combo, q };
     }
     return {
@@ -85,6 +97,26 @@ export const Level2 = {
       q,
       partial: true,
     };
+  },
+
+  /**
+   * Sweep the 8 ABC combos and return the first row whose live circuit output
+   * disagrees with expectedQ, or null if the truth table matches.
+   * @param {import('../modules/circuitLab.js').CircuitLab} lab
+   * @param {string} ledId
+   */
+  _fullTableMismatch(lab, ledId) {
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          const r = evaluateWithPins(lab, { A: a, B: b, C: c });
+          const got = r.outputs[ledId] ?? 0;
+          const want = this.expectedQ(a, b, c);
+          if (got !== want) return { a, b, c, got, want };
+        }
+      }
+    }
+    return null;
   },
 
   _progressSnapshot() {

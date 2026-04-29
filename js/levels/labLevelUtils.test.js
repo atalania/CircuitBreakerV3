@@ -59,4 +59,17 @@ describe("evaluateWithPins", () => {
     const r1 = evaluateWithPins(lab, { A: 1 });
     expect(r1.outputs[led.id]).toBe(1);
   });
+
+  it("restores original source pin values after evaluation", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("in:A", 10, 10);
+    lab.placeAt("in:B", 10, 50);
+    const a = lab.blocks.find((b) => b.kind === "source" && b.pin === "A");
+    const b = lab.blocks.find((bl) => bl.kind === "source" && bl.pin === "B");
+    a.value = 1;
+    b.value = 0;
+    evaluateWithPins(lab, { A: 0, B: 1 });
+    expect(a.value).toBe(1);
+    expect(b.value).toBe(0);
+  });
 });
