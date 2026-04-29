@@ -109,6 +109,40 @@ describe("AITutor", () => {
     expect(onMessage).toHaveBeenCalled();
   });
 
+  it("fetchEndlessChallenge varies the prompt and asks the model to avoid recent titles", async () => {
+    const validTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          validTable[`${a}${b}${c}`] = { F: (a ^ b ^ c) & 1 };
+        }
+      }
+    }
+    aiMocks.postAiProxyChatCompletion.mockResolvedValue({});
+    aiMocks.getOpenAiAssistantText
+      .mockReturnValueOnce(JSON.stringify({ title: "ALPHA", objective: "X", table: validTable }))
+      .mockReturnValueOnce(JSON.stringify({ title: "BETA", objective: "Y", table: validTable }));
+
+    const t = new AITutor();
+    await t.fetchEndlessChallenge();
+    await t.fetchEndlessChallenge();
+
+    expect(aiMocks.postAiProxyChatCompletion).toHaveBeenCalledTimes(2);
+    const firstBody = aiMocks.postAiProxyChatCompletion.mock.calls[0][0];
+    const secondBody = aiMocks.postAiProxyChatCompletion.mock.calls[1][0];
+
+    expect(firstBody.temperature).toBe(0.9);
+    expect(secondBody.temperature).toBe(0.9);
+
+    const firstUser = firstBody.messages.find((m) => m.role === "user").content;
+    const secondUser = secondBody.messages.find((m) => m.role === "user").content;
+
+    expect(firstUser).toMatch(/Variety seed/);
+    expect(secondUser).toMatch(/Do NOT repeat any of these recent challenge titles: ALPHA/);
+    expect(t._recentEndlessTitles[0]).toBe("BETA");
+    expect(t._recentEndlessTitles[1]).toBe("ALPHA");
+  });
+
   it("reset clears history and context", () => {
     const t = new AITutor();
     t.conversationHistory.push({ role: "user", content: "x" });

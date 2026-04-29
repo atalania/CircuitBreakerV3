@@ -46,6 +46,14 @@ describe("randomFallbackChallenge", () => {
     expect(validateTruthTable(ch.table)).toBe(true);
     vi.restoreAllMocks();
   });
+
+  it("avoids titles in the recent list when alternatives exist", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const first = randomFallbackChallenge();
+    const second = randomFallbackChallenge([first.title]);
+    expect(second.title).not.toBe(first.title);
+    vi.restoreAllMocks();
+  });
 });
 
 describe("normalizeTruthTableForObjective", () => {

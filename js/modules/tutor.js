@@ -7,10 +7,21 @@ import { normalizeTruthTableForObjective, randomFallbackChallenge, validateTruth
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 
-const ENDLESS_SYSTEM = `You are generating a digital-logic BUILD challenge for a circuit-lab sandbox.
+const ENDLESS_SYSTEM = `You are generating a fresh digital-logic BUILD challenge for a 3-input circuit-lab sandbox.
 Output ONLY valid JSON (no markdown fences, no commentary).
 Required JSON shape: {"title": string, "objective": string, "table": {"000": {"F": 0|1}, "001": {"F": 0|1}, "010": {"F": 0|1}, "011": {"F": 0|1}, "100": {"F": 0|1}, "101": {"F": 0|1}, "110": {"F": 0|1}, "111": {"F": 0|1}}}
-Rules: table must include all eight 3-bit keys. Each F is 0 or 1. Do not make F constant on every row. Prefer interesting but buildable functions (majority, mux, parity, etc.). If the objective says majority, at least two inputs high, or two or more inputs high, the table must be 000=0, 001=0, 010=0, 011=1, 100=0, 101=1, 110=1, 111=1.`;
+
+Rules:
+- Table must include all eight 3-bit keys. Each F is 0 or 1.
+- Do not make F constant. Aim for between two and six 1-rows so the function is interesting.
+- Title is short (2-4 uppercase words). Objective is one or two sentences naming pins A,B,C and LED F.
+- The objective wording and the truth table MUST agree. If the objective says "majority" or "at least two inputs are high", the table must be 000=0, 001=0, 010=0, 011=1, 100=0, 101=1, 110=1, 111=1.
+
+Variety policy: pick a different family of function each time. Rotate through families like:
+  three-input AND/OR/NAND/NOR, exactly-one-high, exactly-two-high, odd parity (XOR3), even parity (XNOR3),
+  2-to-1 multiplexer with C as select, gated pass (C enables A), implication (A→B), equality / XNOR of two inputs,
+  full-adder sum bit, full-adder carry-out, sum-of-products of any two minterms, comparators, etc.
+Avoid repeating the most recent challenge family. Prefer something the player has not seen this session.`;
 
 async function callTutorApi(payload) {
   /** @type {{ role: string, content: string }[]} */
@@ -27,11 +38,17 @@ async function callTutorApi(payload) {
 
   const model = (import.meta.env.VITE_OPENAI_MODEL || DEFAULT_MODEL).trim();
 
-  const data = await postAiProxyChatCompletion({
+  /** @type {Record<string, unknown>} */
+  const body = {
     model,
     messages,
     max_tokens: 1024,
-  });
+  };
+  if (typeof payload.temperature === "number" && Number.isFinite(payload.temperature)) {
+    body.temperature = payload.temperature;
+  }
+
+  const data = await postAiProxyChatCompletion(body);
 
   const text = getOpenAiAssistantText(data);
   if (!text) {
@@ -41,6 +58,9 @@ async function callTutorApi(payload) {
   return text;
 }
 
+/** Number of recent endless titles we remember to discourage repeats. */
+const ENDLESS_RECENT_MEMORY = 6;
+
 export class AITutor {
   constructor() {
     this.conversationHistory = [];
@@ -48,6 +68,8 @@ export class AITutor {
     this.onMessage = null;
     this.onThinkingChange = null;
     this.currentLevelContext = "";
+    /** @type {string[]} most-recent endless titles, most recent first */
+    this._recentEndlessTitles = [];
   }
 
   setLevelContext(context) {
@@ -154,6 +176,29 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
     this.conversationHistory = [];
     this.currentLevelContext = "";
     this.isThinking = false;
+    this._recentEndlessTitles = [];
+  }
+
+  /**
+   * Build the per-call user message for fetchEndlessChallenge so the model
+   * sees a different prompt every time and is told what to avoid.
+   */
+  _buildEndlessUserMessage() {
+    const recent = (this._recentEndlessTitles || []).slice(0, ENDLESS_RECENT_MEMORY);
+    const avoid = recent.length
+      ? `\nDo NOT repeat any of these recent challenge titles: ${recent.join(", ")}.`
+      : "";
+    const seed = Math.random().toString(36).slice(2, 10);
+    return `Issue the next endless practice challenge as JSON now. Pick a function family you have not used in the past few rounds.${avoid}\nVariety seed: ${seed}.`;
+  }
+
+  _rememberEndlessTitle(title) {
+    if (typeof title !== "string" || !title.trim()) return;
+    const clean = title.trim();
+    this._recentEndlessTitles.unshift(clean);
+    if (this._recentEndlessTitles.length > ENDLESS_RECENT_MEMORY) {
+      this._recentEndlessTitles.length = ENDLESS_RECENT_MEMORY;
+    }
   }
 
   /**
@@ -165,10 +210,11 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
     try {
       const text = await callTutorApi({
         system: ENDLESS_SYSTEM,
+        temperature: 0.9,
         messages: [
           {
             role: "user",
-            content: "Issue the next endless practice challenge as JSON now.",
+            content: this._buildEndlessUserMessage(),
           },
         ],
       });
@@ -186,15 +232,17 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
       const normalizedTable = normalizeTruthTableForObjective(objective, table);
 
       this._setThinking(false);
+      this._rememberEndlessTitle(title);
       return { title, objective, table: normalizedTable };
     } catch (err) {
       console.error("Endless objective error:", err);
       this._setThinking(false);
-      const fb = randomFallbackChallenge();
+      const fb = randomFallbackChallenge(this._recentEndlessTitles);
       if (this.onMessage) {
         const reason = err instanceof Error ? err.message : "fallback";
         this.onMessage(`Using a built-in challenge (${reason}). You can still play normally.`, "tutor");
       }
+      this._rememberEndlessTitle(fb.title);
       return { title: fb.title, objective: fb.objective, table: fb.table };
     }
   }
