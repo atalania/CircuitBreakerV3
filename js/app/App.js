@@ -19,11 +19,9 @@ import { mountLabToolbar } from "./lab/LabToolbar.js";
 import { LabCanvasController } from "./lab/LabCanvasController.js";
 import {
   teardownLevelOverlayNodes,
-  createLevel1Coach,
   createTruthTableTracker,
   createSrLatchTracker,
   createSequenceTracker,
-  refreshLevel1CoachFromDom,
   updateSrLatchTracker,
   updateSequenceTrackerDom,
   updateTruthTableTrackerDom,
@@ -67,16 +65,14 @@ export class App {
       onInputChange: (states) => this._onInputChange(states),
       updateTruthTableTracker: (combo, v, prog, expected) => this._updateTruthTableTracker(combo, v, prog, expected),
       onJkPulse: (id) => handleJkPulse(this, id),
-      afterRedraw: () => {
-        if (this.currentLevel?.id === 1) refreshLevel1CoachFromDom(this.circuitLab);
-      },
+      afterRedraw: () => {},
       onLabChanged: () => this._labRedraw(),
       Level4,
     });
   }
 
   _portalLevelId() {
-    return getPortalLevelId(this.endlessMode, this.currentLevel);
+    return getPortalLevelId(this.endlessMode, this.currentLevel, this.endlessSpec);
   }
 
   _portalTargetConcept() {
@@ -88,17 +84,55 @@ export class App {
   }
 
   /**
+   * Canonical fields assistants need (cannot be overwritten by callers' `extra`).
+   * Includes human-readable titles so STEM bridge / wiki tooling can reconcile context.
+   */
+  _portalAssistantContextEnvelope() {
+    return {
+      campaignLevelNumericId: this.currentLevel?.id ?? null,
+      endlessMode: !!this.endlessMode,
+      portalLevelSlug: this._portalLevelId(),
+      targetConceptEmitted: this._portalTargetConcept(),
+      levelTitleUi:
+        this.endlessMode === true ? (this.endlessSpec?.title ? String(this.endlessSpec.title) : null) : this.currentLevel?.title ?? null,
+    };
+  }
+
+  /**
    * @param {string} eventType
    * @param {Record<string, unknown>} [extra]
    */
   _portalAssistantEvent(eventType, extra = {}) {
+    const {
+      hintCount: hintOverride,
+      timeSpentSeconds: timeOverride,
+      additionalContext: passedContext,
+      ...restExtras
+    } = typeof extra === "object" && extra ? extra : /** @type {any} */ ({});
+
+    const hints =
+      typeof hintOverride === "number" && Number.isFinite(hintOverride)
+        ? hintOverride
+        : this.engine.hintsUsed;
+    const tsec =
+      typeof timeOverride === "number" && Number.isFinite(timeOverride)
+        ? timeOverride
+        : this._portalTimeSpentSeconds();
+
+    /** @type {Record<string, unknown>} */
+    const envelope = this._portalAssistantContextEnvelope();
+    /** @type {Record<string, unknown>} */
+    const mergedAdditional =
+      typeof passedContext === "object" && passedContext !== null ? { ...passedContext, ...envelope } : { ...envelope };
+
     sendAssistantGameEvent({
+      ...restExtras,
+      additionalContext: mergedAdditional,
+      eventType,
       levelId: this._portalLevelId(),
       targetConcept: this._portalTargetConcept(),
-      eventType,
-      hintCount: this.engine.hintsUsed,
-      timeSpentSeconds: this._portalTimeSpentSeconds(),
-      ...extra,
+      hintCount: hints,
+      timeSpentSeconds: tsec,
     });
   }
 
@@ -235,23 +269,14 @@ export class App {
 
     this.tutor.setLevelContext(this.currentLevel.tutorContext);
 
-    if (this.currentLevel.id === 1) {
-      this.ui.addChatMessage(
-        "Tutorial: A/B/C are on the left, X/Y/Z on the right. Drag AND, OR, NOT into the gap — wire from cyan outputs to orange inputs.",
-        "system"
-      );
-      this.ui.addChatMessage(
-        "Goals: X = A AND B. Y = NOT C (Y on when C is off). Z = B OR C. Tap pins to test, then DISARM for a full check.",
-        "system"
-      );
-    }
-
     this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
   }
 
   async _startEndless() {
     this._teardownLabUi();
     const requestId = ++this._endlessRequestId;
+    /** Clear immediately so SUBMIT/HINT cannot verify against the previous round while fetching. */
+    this.endlessSpec = null;
     this.endlessMode = true;
     this.labMode = true;
     this.currentLevel = null;
@@ -279,19 +304,31 @@ export class App {
     this._mountLabToolbar();
     this._labRedraw();
 
-    const spec = await this.tutor.fetchEndlessChallenge();
-    if (!this.endlessMode || requestId !== this._endlessRequestId) {
-      return;
+    const submitBtn = document.getElementById("submit-btn");
+    const hintBtn = document.getElementById("hint-btn");
+    if (submitBtn) submitBtn.disabled = true;
+    if (hintBtn) hintBtn.disabled = true;
+
+    try {
+      const spec = await this.tutor.fetchEndlessChallenge();
+      if (!this.endlessMode || requestId !== this._endlessRequestId) {
+        return;
+      }
+      this.endlessSpec = spec;
+      this._levelPlayStartedAt = Date.now();
+      this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
+      this.tutor.setLevelContext(
+        `Endless mode: ${spec.title}. Student builds on the lab canvas with pins A,B,C and LED F. Objective: ${spec.objective} Truth table (F values for ABC keys): ${JSON.stringify(spec.table)}`
+      );
+      this.ui.updateLevelInfo(-1, spec.title);
+      this.ui.updateObjective(spec.objective);
+      this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
+    } finally {
+      if (requestId === this._endlessRequestId) {
+        if (submitBtn) submitBtn.disabled = false;
+        if (hintBtn) hintBtn.disabled = false;
+      }
     }
-    this.endlessSpec = spec;
-    this._levelPlayStartedAt = Date.now();
-    this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
-    this.tutor.setLevelContext(
-      `Endless mode: ${spec.title}. Student builds on the lab canvas with pins A,B,C and LED F. Objective: ${spec.objective} Truth table (F values for ABC keys): ${JSON.stringify(spec.table)}`
-    );
-    this.ui.updateLevelInfo(-1, spec.title);
-    this.ui.updateObjective(spec.objective);
-    this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
   }
 
   _syncSubmitVisibility() {
@@ -380,9 +417,6 @@ export class App {
     const level = this.currentLevel;
     if (!level) return;
 
-    if (level.id === 1) {
-      createLevel1Coach(this.circuitLab);
-    }
     if (level.id === 2 || level.id === 5) {
       createTruthTableTracker(level);
     }

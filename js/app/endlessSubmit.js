@@ -1,5 +1,5 @@
 import { GameState } from "../modules/engine.js";
-import { normalizeTruthTableForObjective } from "../modules/endlessChallenges.js";
+import { normalizeTruthTableForObjective, validateTruthTable } from "../modules/endlessChallenges.js";
 import { evaluateWithPins, ensureInputPins, ledIdForLabel } from "../levels/labLevelUtils.js";
 
 /**
@@ -7,6 +7,12 @@ import { evaluateWithPins, ensureInputPins, ledIdForLabel } from "../levels/labL
  */
 export function submitEndlessRound(app) {
   if (!app.endlessSpec) return;
+  const table = normalizeTruthTableForObjective(app.endlessSpec.objective, app.endlessSpec.table);
+  if (!validateTruthTable(table)) {
+    app.audio.playFail();
+    app.ui.addChatMessage("Brief objective table is incomplete — wait for briefing or fetch a new endless charge.", "system");
+    return;
+  }
   const err = ensureInputPins(app.circuitLab, ["A", "B", "C"]);
   if (err) {
     app.audio.playFail();
@@ -20,7 +26,6 @@ export function submitEndlessRound(app) {
     return;
   }
 
-  const table = normalizeTruthTableForObjective(app.endlessSpec.objective, app.endlessSpec.table);
   for (let a = 0; a <= 1; a++) {
     for (let b = 0; b <= 1; b++) {
       for (let c = 0; c <= 1; c++) {

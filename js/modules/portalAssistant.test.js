@@ -55,7 +55,7 @@ describe("portalAssistant", () => {
       hintCount: 1,
     });
 
-    // initStemAssistantBridge posts level_start when embedded; then our event sends again
+    // initStemAssistantBridge posts STEM_ASSISTANT_BRIDGE_INIT; then our event sends ASSISTANT_GAME_EVENT
     expect(postMessage).toHaveBeenCalledTimes(2);
     const [msg, target] = postMessage.mock.calls[1];
     expect(msg.type).toBe("ASSISTANT_GAME_EVENT");

@@ -10,6 +10,9 @@ function wire(lab, fromB, fromPort, toB, toPort) {
 function buildSolvedLevel1Lab() {
   const lab = new CircuitLab();
   Level1.setupLab(lab);
+  lab.placeAt("in:A", 100, 140);
+  lab.placeAt("in:B", 100, 260);
+  lab.placeAt("in:C", 100, 380);
   const pinA = lab.blocks.find((b) => b.kind === "source" && b.pin === "A");
   const pinB = lab.blocks.find((b) => b.kind === "source" && b.pin === "B");
   const pinC = lab.blocks.find((b) => b.kind === "source" && b.pin === "C");
@@ -43,19 +46,28 @@ function buildSolvedLevel1Lab() {
 }
 
 describe("Level1", () => {
-  it("getLevel1CoachState reports missing gates until AND/OR/NOT are placed", () => {
+  it("getLevel1CoachState reports missing pins/gates until the student fills the tutorial canvas", () => {
     const lab = new CircuitLab();
     Level1.setupLab(lab);
     const s = getLevel1CoachState(lab);
-    expect(s.pinOk).toBe(true);
+    expect(s.pinOk).toBe(false);
     expect(s.ledsOk).toBe(true);
     expect(s.gatesOk).toBe(false);
+
+    lab.placeAt("in:A", 100, 140);
+    lab.placeAt("in:B", 100, 260);
+    lab.placeAt("in:C", 100, 380);
+    const s2 = getLevel1CoachState(lab);
+    expect(s2.pinOk).toBe(true);
+    expect(s2.gatesOk).toBe(false);
   });
 
   it("checkLab rejects missing pins or LEDs", () => {
     const lab = new CircuitLab();
     Level1.setupLab(lab);
+    lab.placeAt("in:A", 100, 140);
     const pinA = lab.blocks.find((b) => b.kind === "source" && b.pin === "A");
+    expect(pinA).toBeTruthy();
     lab.removeBlock(pinA.id);
     expect(Level1.checkLab(lab).ok).toBe(false);
 

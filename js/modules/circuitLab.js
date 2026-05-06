@@ -193,6 +193,17 @@ export class CircuitLab {
     });
   }
 
+  /**
+   * @param {string} wireId lab wire id
+   * @returns {boolean}
+   */
+  removeWire(wireId) {
+    if (!wireId) return false;
+    const n = this.wires.length;
+    this.wires = this.wires.filter((w) => w.id !== wireId);
+    return this.wires.length < n;
+  }
+
   connectPorts(fromKey, toKey) {
     const [, fromPort] = fromKey.split(":");
     const [toBlock, toPort] = toKey.split(":");
@@ -487,10 +498,9 @@ export class CircuitLab {
         } else if (S === 0 && R === 1) {
           b._q = 0;
           b._qbar = 1;
-        } else if (S === 1 && R === 1) {
-          b._q = 0;
-          b._qbar = 0;
         }
+        /* S=R=1: illegal — expose via srInvalid but do NOT overwrite stored state
+           (forcing Q=Qbar=0 breaks recovery into valid HOLD afterward). */
       }
 
       let changed = false;

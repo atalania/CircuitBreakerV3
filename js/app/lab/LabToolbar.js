@@ -48,22 +48,22 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
       <div class="lab-palette-chip" draggable="true" data-lab-place="nand" title="NAND">NAND</div>
       <div class="lab-palette-chip" draggable="true" data-lab-place="nor" title="NOR">NOR</div>
       <span class="lab-toolbar-div"></span>
-      <span class="lab-toolbar-label">IO</span>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led" title="LED (auto name)">LED</div>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led:X" title="LED X">X</div>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led:Y" title="LED Y">Y</div>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led:Z" title="LED Z">Z</div>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led:Q" title="LED Q">Q</div>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led:QN" title="LED Qn">Qn</div>
-      <div class="lab-palette-chip" draggable="true" data-lab-place="led:F" title="LED F">F</div>
+      <span class="lab-toolbar-label">OUTPUT LEDs</span>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led" title="Generic LED output (auto-named)"><span class="lab-led-cap">LED</span><span class="lab-led-txt">+</span></div>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led:X" title="Named LED output X"><span class="lab-led-cap">LED</span><span class="lab-led-txt">X</span></div>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led:Y" title="Named LED output Y"><span class="lab-led-cap">LED</span><span class="lab-led-txt">Y</span></div>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led:Z" title="Named LED output Z"><span class="lab-led-cap">LED</span><span class="lab-led-txt">Z</span></div>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led:Q" title="Named LED output Q"><span class="lab-led-cap">LED</span><span class="lab-led-txt">Q</span></div>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led:QN" title="Named LED output Q-bar (QN)"><span class="lab-led-cap">LED</span><span class="lab-led-txt">QN</span></div>
+      <div class="lab-palette-chip lab-palette-led" draggable="true" data-lab-place="led:F" title="Named LED output F (endless)"><span class="lab-led-cap">LED</span><span class="lab-led-txt">F</span></div>
       <span class="lab-toolbar-div"></span>
       <span class="lab-toolbar-label">MACRO</span>
       <div class="lab-palette-chip" draggable="true" data-lab-place="sr" title="SR latch">SR</div>
       <div class="lab-palette-chip" draggable="true" data-lab-place="jk" title="JK flip-flop">JK</div>
       <span class="lab-toolbar-div"></span>
       <span class="lab-toolbar-label">TOOLS</span>
-      <button type="button" class="lab-tool" data-lab-tool="erase">Erase</button>
-      <button type="button" class="lab-tool lab-tool-danger" data-lab-tool="clear">Clear</button>
+      <button type="button" class="lab-tool lab-tool-wide" data-lab-tool="erase" title="Click a part to delete it; click a wire to remove only that wire">Erase / disconnect wire</button>
+      <button type="button" class="lab-tool lab-tool-danger lab-tool-clear" data-lab-tool="clear" title="Wipe canvas and reload this charge’s default seeds">CLEAR CANVAS (reset)</button>
     `;
   const viewport = document.querySelector(".circuit-viewport");
   panel.insertBefore(bar, viewport || panel.firstChild);
@@ -112,7 +112,9 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
         if (cur?.id === 1) {
           const { Level1 } = host;
           Level1.setupLab(lab);
-          host.addSystemMessage("Canvas reset to the tutorial layout (inputs left, LEDs right).");
+          host.addSystemMessage(
+            "Canvas reset: LEDs X/Y/Z restored. Drag pins **A**, **B**, **C** from INPUTS onto the canvas if you wiped them.",
+          );
         } else {
           host.addSystemMessage("Canvas cleared — progress for this charge has been reset.");
         }

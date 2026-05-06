@@ -150,6 +150,7 @@ export class CircuitRenderer {
   drawWire(id, points, options = {}) {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.setAttribute("id", `wire-${id}`);
+    g.setAttribute("data-lab-wire-id", String(id));
 
     let d = `M${points[0][0]},${points[0][1]}`;
     for (let i = 1; i < points.length; i++) {
@@ -158,16 +159,18 @@ export class CircuitRenderer {
 
     g.innerHTML = `
       <path d="${d}" fill="none" stroke="var(--wire-off)" stroke-width="3" 
-            stroke-linecap="round" stroke-linejoin="round" class="wire-path wire-${id}"/>
+            stroke-linecap="round" stroke-linejoin="round" class="wire-path wire-${id}" pointer-events="none"/>
+      <path d="${d}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"
+            stroke-linecap="round" stroke-linejoin="round" class="lab-wire-hit"/>
       <path d="${d}" fill="none" stroke="var(--wire-off)" stroke-width="6" 
             stroke-linecap="round" stroke-linejoin="round" class="wire-glow wire-${id}-glow" 
-            opacity="0" filter="url(#glow-wire)"/>
+            opacity="0" filter="url(#glow-wire)" pointer-events="none"/>
     `;
 
     // Junction dots at bends
     if (options.junctions) {
       for (const junc of options.junctions) {
-        g.innerHTML += `<circle cx="${junc[0]}" cy="${junc[1]}" r="4" fill="var(--wire-off)" class="wire-junction-${id}"/>`;
+        g.innerHTML += `<circle cx="${junc[0]}" cy="${junc[1]}" r="4" fill="var(--wire-off)" class="wire-junction-${id}" pointer-events="none"/>`;
       }
     }
 

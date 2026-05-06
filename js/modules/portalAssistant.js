@@ -1,5 +1,9 @@
 // ============================================================
 //  PORTAL ASSISTANT — thin adapter over stem-assistant-bridge
+//  Mirrors the wiki “Web Assistant Bridge – Game Integration Guide”:
+//  initStemAssistantBridge at startup + stemAssistant.* from gameplay hooks.
+//  Standalone dev uses vite/vitest resolve.alias → js/vendor/stem-assistant-bridge.js;
+//  portal build uses npm "stem-assistant-bridge": "file:../../packages/stem-assistant-bridge".
 // ============================================================
 
 import gameData from "../../data/game.json";
@@ -12,10 +16,22 @@ import {
 
 let bridgeInitialized = false;
 
-/** Opt-in via VITE_PORTAL_ASSISTANT=1 (e.g. Vitest / hub iframe). */
+/**
+ * When to forward gameplay to the wiki shell via postMessage:
+ * - Default: iframe embed (portal parent differs from game window) matches the wiki bridge guide.
+ * - VITE_PORTAL_ASSISTANT=1 forces on (tests, forcing events outside an iframe).
+ * - VITE_PORTAL_ASSISTANT=0 forces off (quiet local standalone dev).
+ */
 export function isPortalAssistantActive() {
   if (typeof window === "undefined") return false;
-  return import.meta.env.VITE_PORTAL_ASSISTANT === "1";
+  const flag = import.meta.env.VITE_PORTAL_ASSISTANT;
+  if (flag === "0") return false;
+  if (flag === "1") return true;
+  try {
+    return window.parent !== window.self;
+  } catch {
+    return true;
+  }
 }
 
 /** Slug must match src/data/games.ts iframe entry on the wiki. */
@@ -54,6 +70,11 @@ export function sendAssistantGameEvent(eventData) {
   ensureBridgeInitialized();
 
   const payload = { ...eventData };
+  const resolvedGameId =
+    typeof payload.gameId === "string" && payload.gameId.trim()
+      ? payload.gameId.trim()
+      : getAssistantGameId();
+
   const levelId =
     typeof payload.levelId === "string" && payload.levelId.trim()
       ? payload.levelId.trim()
@@ -70,6 +91,7 @@ export function sendAssistantGameEvent(eventData) {
   }
 
   const extra = {
+    gameId: resolvedGameId,
     levelId,
     targetConcept,
     hintCount: typeof payload.hintCount === "number" ? payload.hintCount : undefined,

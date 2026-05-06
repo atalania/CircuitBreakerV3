@@ -202,6 +202,19 @@ describe("CircuitLab lifecycle", () => {
     expect(lab.wires.length).toBe(0);
     expect(lab.blocks.some((b) => b.id === hi.id)).toBe(false);
   });
+
+  it("removeWire removes one connection only", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 0, 0);
+    lab.placeAt("led", 50, 0);
+    const [hi] = blockByKind(lab, "source");
+    const [led] = blockByKind(lab, "led");
+    wire(lab, hi, "out", led, "in");
+    const wid = lab.wires[0].id;
+    expect(lab.removeWire(wid)).toBe(true);
+    expect(lab.wires.length).toBe(0);
+    expect(lab.removeWire("nope")).toBe(false);
+  });
 });
 
 describe("CircuitLab SR latch", () => {
@@ -235,6 +248,34 @@ describe("CircuitLab SR latch", () => {
     const r = lab.evaluate({});
     expect(r.srInvalid).toBe(true);
     expect(r.outputs[led2.id]).toBe(0);
+  });
+
+  it("does not wipe SR memory on illegal S=R=1 — returns to HOLD with prior Q", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 10, 10);
+    lab.placeAt("low", 10, 50);
+    lab.placeAt("sr", 140, 30);
+    const sources = lab.blocks.filter((b) => b.kind === "source");
+    const hiB = sources.find((b) => b.label === "1");
+    const loB = sources.find((b) => b.label === "0");
+    const sr = lab.blocks.find((b) => b.kind === "sr");
+    expect(hiB && loB && sr).toBeTruthy();
+    lab.connectPorts(`${hiB.id}:out`, `${sr.id}:inS`);
+    lab.connectPorts(`${loB.id}:out`, `${sr.id}:inR`);
+    lab.evaluate({});
+    expect(sr._q).toBe(1);
+
+    lab.connectPorts(`${hiB.id}:out`, `${sr.id}:inR`);
+    const illegal = lab.evaluate({});
+    expect(illegal.srInvalid).toBe(true);
+    expect(sr._q).toBe(1);
+    expect(sr._qbar).toBe(0);
+
+    lab.connectPorts(`${loB.id}:out`, `${sr.id}:inS`);
+    lab.connectPorts(`${loB.id}:out`, `${sr.id}:inR`);
+    lab.evaluate({});
+    expect(sr._q).toBe(1);
+    expect(sr._qbar).toBe(0);
   });
 });
 

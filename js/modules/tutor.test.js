@@ -152,5 +152,6 @@ describe("AITutor", () => {
     expect(t.conversationHistory.length).toBe(0);
     expect(t.currentLevelContext).toBe("");
     expect(t.isThinking).toBe(false);
+    expect(t._endlessChallengeAttempt).toBe(0);
   });
 });

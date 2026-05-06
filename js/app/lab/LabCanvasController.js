@@ -22,6 +22,7 @@ import { svgClientToSvg } from "./svgClientToSvg.js";
 
 export class LabCanvasController {
   static WIRE_DROP_SNAP_RADIUS_PX = 20;
+  /** @readonly */ static LABELED_PIN_DRAG_THRESHOLD_PX = 9;
   /**
    * @param {LabCanvasHost} host
    */
@@ -36,11 +37,186 @@ export class LabCanvasController {
     /** @type {PointerEvent | null} */
     this._lastPointerEvent = null;
 
+    /** @type {{ blockId: string, clientX: number, clientY: number, _becameDrag?: boolean } | null} */
+    this._labeledPinGesture = null;
+    /** Level 4: short tap pulses CLK; drag past threshold moves the JK block. */
+    /** @type {{ blockId: string, clientX: number, clientY: number, _becameDrag?: boolean } | null} */
+    this._jkClockGesture = null;
+
     this._wireMove = (e) => this._onWireMove(e);
     this._wireUp = (e) => this._onWireUp(e);
     this._blockMove = (e) => this._onBlockMove(e);
     this._blockPointerUp = (e) => this._onBlockPointerUp(e);
     this._svgPointerDown = (e) => this._onSvgPointerDown(e);
+    this._labeledPinMove = (e) => this._onLabeledPinMove(e);
+    this._labeledPinEnd = (e) => this._onLabeledPinEnd(e);
+    this._jkClockMove = (e) => this._onJkClockMove(e);
+    this._jkClockEnd = (e) => this._onJkClockEnd(e);
+  }
+
+  _labeledPinDetachListeners() {
+    window.removeEventListener("pointermove", this._labeledPinMove);
+    window.removeEventListener("pointerup", this._labeledPinEnd, { capture: true });
+    window.removeEventListener("pointercancel", this._labeledPinEnd, { capture: true });
+  }
+
+  _jkClockDetachListeners() {
+    window.removeEventListener("pointermove", this._jkClockMove);
+    window.removeEventListener("pointerup", this._jkClockEnd, { capture: true });
+    window.removeEventListener("pointercancel", this._jkClockEnd, { capture: true });
+  }
+
+  /**
+   * @param {PointerEvent} e
+   * @param {string} blockId
+   */
+  _jkClockGestureStart(e, blockId) {
+    this._jkClockDetachListeners();
+    e.preventDefault();
+    this._jkClockGesture = /** @type {any} */ ({
+      blockId,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      _becameDrag: false,
+    });
+    window.addEventListener("pointermove", this._jkClockMove);
+    window.addEventListener("pointerup", this._jkClockEnd, { capture: true });
+    window.addEventListener("pointercancel", this._jkClockEnd, { capture: true });
+  }
+
+  /**
+   * @param {PointerEvent} e
+   */
+  _onJkClockMove(e) {
+    const g = this._jkClockGesture;
+    if (!g) return;
+    const th = LabCanvasController.LABELED_PIN_DRAG_THRESHOLD_PX;
+    const dx = e.clientX - g.clientX;
+    const dy = e.clientY - g.clientY;
+    if (!g._becameDrag && dx * dx + dy * dy >= th * th) {
+      const renderer = this.host.getRenderer();
+      const svg = renderer && renderer.svg;
+      const lab = this.host.getCircuitLab();
+      const b = lab.blocks.find((x) => x.id === g.blockId && x.kind === "jk");
+      if (!b || !svg) return;
+      g._becameDrag = true;
+      this._jkClockDetachListeners();
+      this._jkClockGesture = null;
+      const { x, y } = svgClientToSvg(svg, e.clientX, e.clientY);
+      this._blockDrag = { id: g.blockId, lastX: x, lastY: y, kind: "gate" };
+      e.preventDefault();
+      window.addEventListener("pointermove", this._blockMove);
+      window.addEventListener("pointerup", this._blockPointerUp, { once: true });
+    }
+  }
+
+  /**
+   * @param {PointerEvent} _e
+   */
+  _onJkClockEnd(_e) {
+    const gesture = this._jkClockGesture;
+    this._jkClockDetachListeners();
+    const becameDrag = gesture && gesture._becameDrag;
+    const bid = gesture && gesture.blockId;
+    this._jkClockGesture = null;
+    if (becameDrag || !bid) return;
+    this.host.onJkPulse(bid);
+  }
+
+  /**
+   * Tap toggles labeled pins (A,B,C…); drag moves them around the canvas.
+   * @param {PointerEvent} e
+   * @param {string} blockId
+   */
+  _labeledPinGestureStart(e, blockId) {
+    this._labeledPinDetachListeners();
+    e.preventDefault();
+    this._labeledPinGesture = /** @type {any} */ ({
+      blockId,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      _becameDrag: false,
+    });
+    window.addEventListener("pointermove", this._labeledPinMove);
+    window.addEventListener("pointerup", this._labeledPinEnd, { capture: true });
+    window.addEventListener("pointercancel", this._labeledPinEnd, { capture: true });
+  }
+
+  /**
+   * @param {PointerEvent} e
+   */
+  _onLabeledPinMove(e) {
+    const g = this._labeledPinGesture;
+    if (!g) return;
+    const th = LabCanvasController.LABELED_PIN_DRAG_THRESHOLD_PX;
+    const dx = e.clientX - g.clientX;
+    const dy = e.clientY - g.clientY;
+    if (!g._becameDrag && dx * dx + dy * dy >= th * th) {
+      const renderer = this.host.getRenderer();
+      const svg = renderer && renderer.svg;
+      const lab = this.host.getCircuitLab();
+      const b = lab.blocks.find((x) => x.id === g.blockId && x.kind === "source");
+      if (!b || !b.pin || !svg) return;
+      g._becameDrag = true;
+      this._labeledPinDetachListeners();
+      this._labeledPinGesture = null;
+      const { x, y } = svgClientToSvg(svg, e.clientX, e.clientY);
+      this._blockDrag = { id: g.blockId, lastX: x, lastY: y, kind: "cxcy" };
+      e.preventDefault();
+      window.addEventListener("pointermove", this._blockMove);
+      window.addEventListener("pointerup", this._blockPointerUp, { once: true });
+    }
+  }
+
+  /**
+   * @param {PointerEvent} e
+   */
+  _onLabeledPinEnd(_e) {
+    const gesture = this._labeledPinGesture;
+    this._labeledPinDetachListeners();
+
+    const becameDrag = gesture && gesture._becameDrag;
+    const bid = gesture && gesture.blockId;
+    this._labeledPinGesture = null;
+
+    if (becameDrag || !bid) return;
+
+    const lab = this.host.getCircuitLab();
+    if (!lab.blocks.some((z) => z.id === bid)) return;
+
+    if (lab.toggleSource(bid)) {
+      this.host.playSwitch();
+      this.host.onLabChanged();
+      if (this.host.getEngineState() === GameState.PLAYING) {
+        const cur = this.host.getCurrentLevel();
+        if (cur?.id === 2 || cur?.id === 5) {
+          const pins = lab.getPinValues();
+          const combo = `${pins.A ?? 0}${pins.B ?? 0}${pins.C ?? 0}`;
+          const led =
+            cur.id === 2
+              ? lab.findLedByLabel("Q")
+              : lab.findLedByLabel("F");
+          if (led) {
+            const r = evaluateWithPins(lab, {
+              A: pins.A ?? 0,
+              B: pins.B ?? 0,
+              C: pins.C ?? 0,
+            });
+            const v = r.outputs[led.id] ?? 0;
+            const a = pins.A ?? 0;
+            const b = pins.B ?? 0;
+            const c = pins.C ?? 0;
+            const expected = cur.id === 2 ? cur.expectedQ?.(a, b, c) : cur.expectedF?.(a, b, c);
+            this.host.updateTruthTableTracker(
+              combo,
+              v,
+              cur.getProgress?.() || null,
+              typeof expected === "number" ? expected : undefined
+            );
+          }
+        }
+      }
+    }
   }
 
   redraw() {
@@ -84,20 +260,6 @@ export class LabCanvasController {
         window.addEventListener("pointerup", this._wireUp, { once: true });
       });
     });
-
-    svg.querySelectorAll(".lab-jk-hit").forEach((hit) => {
-      hit.addEventListener("pointerdown", (e) => {
-        if (!this.host.isLabMode()) return;
-        if (this.host.getCircuitLab().tool === "erase") return;
-        const cur = this.host.getCurrentLevel();
-        if (!cur || cur.id !== 4) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const id = hit.dataset.jkId || "";
-        if (!id) return;
-        this.host.onJkPulse(id);
-      });
-    });
   }
 
   /**
@@ -106,16 +268,21 @@ export class LabCanvasController {
   _onSvgPointerDown(e) {
     if (!this.host.isLabMode()) return;
 
-    const jkHit = /** @type {HTMLElement} */ (e.target).closest(".lab-jk-hit");
-    if (jkHit && this.host.getCurrentLevel()?.id === 4) {
-      return;
-    }
-
     if (/** @type {HTMLElement} */ (e.target).closest(".lab-port")) return;
 
     const lab = this.host.getCircuitLab();
 
     if (lab.tool === "erase") {
+      const wireGrp = /** @type {HTMLElement} */ (e.target).closest("[data-lab-wire-id]");
+      const wid = wireGrp && wireGrp.getAttribute && wireGrp.getAttribute("data-lab-wire-id");
+      if (wid && lab.removeWire(wid)) {
+        this.host.onLabChanged();
+        if (this.host.getCurrentLevel()?.id === 4) {
+          this.host.Level4.primeLab(lab);
+        }
+        return;
+      }
+
       const bid = labBlockIdFromElement(/** @type {HTMLElement} */ (e.target));
       if (bid) {
         lab.removeBlock(bid);
@@ -131,39 +298,11 @@ export class LabCanvasController {
     if (bid) {
       const b = lab.blocks.find((x) => x.id === bid);
       if (b?.kind === "source" && b.pin) {
-        if (lab.toggleSource(bid)) {
-          this.host.playSwitch();
-          this.host.onLabChanged();
-          if (this.host.getEngineState() === GameState.PLAYING) {
-            const cur = this.host.getCurrentLevel();
-            if (cur?.id === 2 || cur?.id === 5) {
-              const pins = lab.getPinValues();
-              const combo = `${pins.A ?? 0}${pins.B ?? 0}${pins.C ?? 0}`;
-              const led =
-                cur.id === 2
-                  ? lab.findLedByLabel("Q")
-                  : lab.findLedByLabel("F");
-              if (led) {
-                const r = evaluateWithPins(lab, {
-                  A: pins.A ?? 0,
-                  B: pins.B ?? 0,
-                  C: pins.C ?? 0,
-                });
-                const v = r.outputs[led.id] ?? 0;
-                const a = pins.A ?? 0;
-                const b = pins.B ?? 0;
-                const c = pins.C ?? 0;
-                const expected = cur.id === 2 ? cur.expectedQ?.(a, b, c) : cur.expectedF?.(a, b, c);
-                this.host.updateTruthTableTracker(
-                  combo,
-                  v,
-                  cur.getProgress?.() || null,
-                  typeof expected === "number" ? expected : undefined
-                );
-              }
-            }
-          }
-        }
+        this._labeledPinGestureStart(e, bid);
+        return;
+      }
+      if (b?.kind === "jk" && this.host.getCurrentLevel()?.id === 4) {
+        this._jkClockGestureStart(e, bid);
         return;
       }
     }
@@ -178,7 +317,8 @@ export class LabCanvasController {
     const isGate = ["and", "or", "not", "xor", "nand", "nor"].includes(b.kind);
     const isMacro = b.kind === "sr" || b.kind === "jk";
     const isConstSource = b.kind === "source" && !b.pin;
-    const canMove = isGate || isMacro || b.kind === "led" || isConstSource;
+    const isLabeledPin = b.kind === "source" && b.pin;
+    const canMove = isGate || isMacro || b.kind === "led" || isConstSource || isLabeledPin;
     if (!canMove) return;
     this._blockDrag = {
       id: bid,

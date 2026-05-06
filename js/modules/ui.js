@@ -133,9 +133,17 @@ export class UIManager {
   addChatMessage(text, sender = "tutor") {
     const msg = document.createElement("div");
     msg.className = `chat-message chat-${sender}`;
+    msg.setAttribute("data-sender", String(sender));
 
-    const avatar = sender === "tutor" ? "📋" : "🪖";
-    const name = sender === "tutor" ? "Ordnance Officer" : "You";
+    let avatar = "🪖";
+    let name = "You";
+    if (sender === "tutor") {
+      avatar = "📋";
+      name = "Ordnance Officer";
+    } else if (sender === "system") {
+      avatar = "⚙️";
+      name = "System";
+    }
 
     msg.innerHTML = `
       <div class="chat-avatar">${avatar}</div>

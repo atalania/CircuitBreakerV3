@@ -47,6 +47,18 @@ describe("submitEndlessRound", () => {
     expect(app.audio.playFail).not.toHaveBeenCalled();
   });
 
+  it("fails when the normalized truth table is incomplete", () => {
+    const app = appWithLab(new CircuitLab(), {
+      endlessSpec: { title: "BAD", objective: "x", table: { "000": { F: 0 } } },
+    });
+    submitEndlessRound(app);
+    expect(app.audio.playFail).toHaveBeenCalled();
+    expect(app.ui.addChatMessage).toHaveBeenCalledWith(
+      expect.stringMatching(/table is incomplete/i),
+      "system"
+    );
+  });
+
   it("fails when required pins are missing", () => {
     const lab = new CircuitLab();
     const app = appWithLab(lab);

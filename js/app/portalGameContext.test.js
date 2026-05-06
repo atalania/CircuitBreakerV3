@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getPortalLevelId, getPortalTargetConcept, getPortalTimeSpentSeconds } from "./portalGameContext.js";
+import {
+  getPortalLevelId,
+  getPortalTargetConcept,
+  getPortalTimeSpentSeconds,
+  slugifyEndlessTitle,
+} from "./portalGameContext.js";
 
 describe("portalGameContext", () => {
   beforeEach(() => {
@@ -11,10 +16,15 @@ describe("portalGameContext", () => {
     vi.useRealTimers();
   });
 
-  it("getPortalLevelId maps endless, numbered levels, and menu", () => {
+  it("getPortalLevelId maps endless, numbered levels, menu, and endless title slugs", () => {
     expect(getPortalLevelId(true, { id: 2 })).toBe("endless");
     expect(getPortalLevelId(false, { id: 3 })).toBe("level-3");
     expect(getPortalLevelId(false, null)).toBe("menu");
+    expect(getPortalLevelId(true, null, { title: "MAJORITY DETECTOR" })).toBe("endless:majority-detector");
+  });
+
+  it("slugifyEndlessTitle normalizes punctuation and case", () => {
+    expect(slugifyEndlessTitle(" Odd  Parity Gate! ")).toBe("odd-parity-gate");
   });
 
   it("getPortalTargetConcept returns concepts per level and endless", () => {

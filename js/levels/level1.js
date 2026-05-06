@@ -38,8 +38,8 @@ export const Level1 = {
   subtitle: "AND • OR • NOT",
   timeLimit: 240,
   objective:
-    "Tutorial: inputs and LEDs start on the canvas for you. Drag AND, OR, and NOT from the bar into the gap, wire cyan → orange, then DISARM. Goal: X = A·B, Y = NOT C, Z = B OR C.",
-  tutorContext: `Level 1 (guided): Canvas is pre-seeded with pins A,B,C and LEDs X,Y,Z. Student adds AND/OR/NOT gates and wires only.
+    "Drag pins A, B, and C onto the canvas (palette left). Outputs X, Y, Z start on the right. Add AND, OR, NOT, wire cyan → orange, then DISARM. Goal: X = A·B, Y = NOT C, Z = B OR C.",
+  tutorContext: `Level 1 (guided): Canvas starts with LEDs X,Y,Z only. Student drags pins A,B,C from the toolbar, adds AND/OR/NOT gates and wires.
 Must satisfy for all 8 input rows:
 X = A AND B, Y = NOT C, Z = B OR C.
 Verification is exhaustive truth-table check on DISARM.`,
@@ -49,9 +49,6 @@ Verification is exhaustive truth-table check on DISARM.`,
    * @param {import('../modules/circuitLab.js').CircuitLab} lab
    */
   setupLab(lab) {
-    lab.placeAt("in:A", 100, 140);
-    lab.placeAt("in:B", 100, 260);
-    lab.placeAt("in:C", 100, 380);
     lab.placeAt("led:X", 780, 140);
     lab.placeAt("led:Y", 780, 260);
     lab.placeAt("led:Z", 780, 380);
@@ -77,7 +74,7 @@ Verification is exhaustive truth-table check on DISARM.`,
     if (!idX || !idY || !idZ) {
       return {
         ok: false,
-        message: "Place LED X, LED Y, and LED Z (they load automatically at start — avoid clearing unless you mean to).",
+        message: "Place labeled pins **A**, **B**, and **C** from the INPUTS row, plus LED **X**, **Y**, **Z**. (LEDs load at level start.)",
       };
     }
 

@@ -5,6 +5,16 @@
 import { getOpenAiAssistantText, postAiProxyChatCompletion } from "./aiProxyClient.js";
 import { normalizeTruthTableForObjective, randomFallbackChallenge, validateTruthTable } from "./endlessChallenges.js";
 
+/** Rotating instruction angles so successive endless API calls steer the model differently. */
+const ENDLESS_USER_ANGLE_CLAUSES = [
+  'Issue the next endless practice challenge as JSON now. Emphasize a **multiplexer or data-select** style function (often with C as select). Describe it plainly in objective text.',
+  "Issue the next endless practice challenge as JSON now. Emphasize a **parity / XOR-family** motif (odd/even parity, XOR3, inverted XOR). Objective must match table exactly.",
+  "Issue the next endless practice challenge as JSON now. Prefer a **threshold / counting** motif (exactly-two-high, majority, carries, NAND-of-ANDs variants). Objective must spell out thresholds.",
+  "Issue the next endless practice challenge as JSON now. Aim for **implication, equality-check, or XNOR-two-inputs-ignore-C** style statements. Rotate away from XOR/MUX-heavy briefs.",
+  "Issue the next endless practice challenge as JSON now. Emphasize **minterm / maxterm** phrasing — name specific AB C rows lit in F.",
+  'Issue the next endless practice challenge as JSON now. Emphasize **enable / gated-pass** motifs (output forced low unless C asserts, etc.). Mention unused pins honestly when C irrelevant.',
+];
+
 const DEFAULT_MODEL = "gpt-4o-mini";
 
 const ENDLESS_SYSTEM = `You are generating a fresh digital-logic BUILD challenge for a 3-input circuit-lab sandbox.
@@ -70,6 +80,8 @@ export class AITutor {
     this.currentLevelContext = "";
     /** @type {string[]} most-recent endless titles, most recent first */
     this._recentEndlessTitles = [];
+    /** Advances each endless fetch — rotates prompting angles toward variety */
+    this._endlessChallengeAttempt = 0;
   }
 
   setLevelContext(context) {
@@ -177,6 +189,7 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
     this.currentLevelContext = "";
     this.isThinking = false;
     this._recentEndlessTitles = [];
+    this._endlessChallengeAttempt = 0;
   }
 
   /**
@@ -188,8 +201,10 @@ ${playerAction ? `\nStudent's last action: ${playerAction}` : ""}`;
     const avoid = recent.length
       ? `\nDo NOT repeat any of these recent challenge titles: ${recent.join(", ")}.`
       : "";
-    const seed = Math.random().toString(36).slice(2, 10);
-    return `Issue the next endless practice challenge as JSON now. Pick a function family you have not used in the past few rounds.${avoid}\nVariety seed: ${seed}.`;
+    const tryNo = ++this._endlessChallengeAttempt;
+    const angle = ENDLESS_USER_ANGLE_CLAUSES[(tryNo - 1) % ENDLESS_USER_ANGLE_CLAUSES.length];
+    const seed = `${Math.random().toString(36).slice(2, 10)}:${tryNo}`;
+    return `${angle}${avoid}\nVariety seed: ${seed}.`;
   }
 
   _rememberEndlessTitle(title) {
