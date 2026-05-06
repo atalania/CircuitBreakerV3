@@ -42,6 +42,7 @@ export class UIManager {
       modalBtn2: document.getElementById("modal-btn-2"),
       // Menu
       startBtn: document.getElementById("start-btn"),
+      tutorialBtn: document.getElementById("tutorial-btn"),
       circuitLabBtn: document.getElementById("circuit-lab-btn"),
       levelSelectBtns: document.querySelectorAll(".level-select-btn:not(#circuit-lab-btn)"),
     };
@@ -74,6 +75,16 @@ export class UIManager {
       this.elements.timerEyebrow.textContent = "ENDLESS — AI BRIEF";
     }
     this.elements.timerDisplay.textContent = "∞";
+    this.elements.timerDisplay.className = "timer-display timer-lab";
+    this.elements.timerBar.style.width = "100%";
+    this.elements.timerBar.className = "timer-bar timer-bar-lab";
+  }
+
+  updateGuidedTutorialTimer() {
+    if (this.elements.timerEyebrow) {
+      this.elements.timerEyebrow.textContent = "GUIDED RUN — NO FUSE";
+    }
+    this.elements.timerDisplay.textContent = "PRACTICE";
     this.elements.timerDisplay.className = "timer-display timer-lab";
     this.elements.timerBar.style.width = "100%";
     this.elements.timerBar.className = "timer-bar timer-bar-lab";

@@ -36,6 +36,8 @@ export const Level1 = {
   id: 1,
   title: "GATE FUNDAMENTALS",
   subtitle: "AND • OR • NOT",
+  clearCanvasHint:
+    "Canvas reset: LEDs X/Y/Z restored. Drag pins **A**, **B**, **C** from INPUTS onto the canvas if you wiped them.",
   timeLimit: 240,
   objective:
     "Drag pins A, B, and C onto the canvas (palette left). Outputs X, Y, Z start on the right. Add AND, OR, NOT, wire cyan → orange, then DISARM. Goal: X = A·B, Y = NOT C, Z = B OR C.",

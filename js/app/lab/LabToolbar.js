@@ -9,7 +9,8 @@ import { svgClientToSvg } from "./svgClientToSvg.js";
  * @property {() => { id: number } | null} getCurrentLevel
  * @property {() => void} onLabChanged
  * @property {(text: string) => void} addSystemMessage
- * @property {any} Level1 — level1 module (setupLab on canvas reset)
+ * @property {any} Level1 — default level 1 module (fallback)
+ * @property {() => any} [getLevel1ForCanvasReset] — Level1 vs guided intro variant for CLEAR CANVAS seed
  * @property {() => void} [afterClearLevel4]
  * @property {(cur: { id: number } | null) => void} [afterCanvasClear]
  */
@@ -110,11 +111,9 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
         const cur = host.getCurrentLevel();
         host.afterCanvasClear?.(cur);
         if (cur?.id === 1) {
-          const { Level1 } = host;
-          Level1.setupLab(lab);
-          host.addSystemMessage(
-            "Canvas reset: LEDs X/Y/Z restored. Drag pins **A**, **B**, **C** from INPUTS onto the canvas if you wiped them.",
-          );
+          const L1 = host.getLevel1ForCanvasReset ? host.getLevel1ForCanvasReset() : host.Level1;
+          L1.setupLab(lab);
+          host.addSystemMessage(L1.clearCanvasHint || "Canvas reset for this charge.");
         } else {
           host.addSystemMessage("Canvas cleared — progress for this charge has been reset.");
         }

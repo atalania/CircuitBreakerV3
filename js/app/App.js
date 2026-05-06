@@ -8,6 +8,7 @@ import { AITutor } from "../modules/tutor.js";
 import { UIManager } from "../modules/ui.js";
 import { AudioManager } from "../modules/audio.js";
 import { Level1 } from "../levels/level1.js";
+import { Level1Guided } from "../levels/level1Guided.js";
 import { Level2 } from "../levels/level2.js";
 import { Level3 } from "../levels/level3.js";
 import { Level4 } from "../levels/level4.js";
@@ -22,6 +23,8 @@ import {
   createTruthTableTracker,
   createSrLatchTracker,
   createSequenceTracker,
+  createLevel1GuidedCoach,
+  refreshLevel1GuidedCoachFromDom,
   updateSrLatchTracker,
   updateSequenceTrackerDom,
   updateTruthTableTrackerDom,
@@ -68,6 +71,11 @@ export class App {
     this._portalDataReady = false;
     /** @type {(() => void) | null} */
     this._cleanupPortalGameDataBridge = null;
+    this._tutorialSeenStorageKey = "circuitBreaker.tutorialSeen.v1";
+    /** True after "START GUIDED RUN" until level index changes or return to menu. */
+    this._guidedTutorialRun = false;
+    /** @type {number[]} */
+    this._guidedIntroTipTimeouts = [];
 
     this.labCanvas = new LabCanvasController({
       isLabMode: () => this.labMode,
@@ -80,9 +88,16 @@ export class App {
       updateTruthTableTracker: (combo, v, prog, expected) => this._updateTruthTableTracker(combo, v, prog, expected),
       onJkPulse: (id) => handleJkPulse(this, id),
       afterRedraw: () => {},
-      onLabChanged: () => this._labRedraw(),
+      onLabChanged: () => this._onLabUiChanged(),
       Level4,
     });
+  }
+
+  _onLabUiChanged() {
+    this._labRedraw();
+    if (this.currentLevel?.isGuidedIntro) {
+      refreshLevel1GuidedCoachFromDom(this.circuitLab);
+    }
   }
 
   _portalLevelId() {
@@ -166,6 +181,62 @@ export class App {
     this._bindGlobalShortcuts();
 
     this.ui.showMenu();
+    if (!this._hasSeenTutorial()) {
+      this._showTutorialPrompt(true);
+    }
+  }
+
+  _hasSeenTutorial() {
+    try {
+      return localStorage.getItem(this._tutorialSeenStorageKey) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  _markTutorialSeen() {
+    try {
+      localStorage.setItem(this._tutorialSeenStorageKey, "1");
+    } catch {
+      /* ignore storage failure */
+    }
+  }
+
+  _selectMenuLevel(index) {
+    this.menuPick = { kind: "level", index };
+    this.selectedLevelIndex = index;
+    this.ui.elements.levelSelectBtns.forEach((b) => b.classList.remove("active"));
+    if (this.ui.elements.circuitLabBtn) this.ui.elements.circuitLabBtn.classList.remove("active");
+    const btn = this.ui.elements.levelSelectBtns[index];
+    if (btn) btn.classList.add("active");
+  }
+
+  _showTutorialPrompt(isFirstRun = false) {
+    const title = isFirstRun ? "WELCOME — QUICK WALKTHROUGH" : "HOW TO PLAY";
+    const body = `
+      <div class="tutorial-copy">
+        <p><strong>Goal:</strong> Build a small circuit that makes the target LED output match the objective, then press <strong>DISARM</strong>.</p>
+        <p><strong>Where things are:</strong> Drag parts from the top toolbar (INPUTS, GATES, LEDs) into the canvas. Use <strong>Erase</strong> to remove a part or wire.</p>
+        <p><strong>Gate cheat sheet:</strong> AND = all 1s, OR = any 1, NOT = flips 0/1, XOR = different inputs.</p>
+        <p><strong>New-player route:</strong> We start with a <strong>tiny training charge</strong> (one AND, three wires) — then unlock the full <strong>Gate Basics</strong> level from the menu. Use <strong>BOMB INTEL</strong> anytime for hints.</p>
+      </div>
+    `;
+    this.ui.showModal(
+      title,
+      body,
+      "START GUIDED RUN",
+      () => {
+        this._markTutorialSeen();
+        this._selectMenuLevel(0);
+        this.audio.init();
+        this._guidedTutorialRun = true;
+        this._startLevel(0);
+      },
+      "CLOSE",
+      () => {
+        this._markTutorialSeen();
+      }
+    );
   }
 
   async _initPortalGameData() {
@@ -230,6 +301,10 @@ export class App {
       });
     }
 
+    if (this.ui.elements.tutorialBtn) {
+      this.ui.elements.tutorialBtn.addEventListener("click", () => this._showTutorialPrompt(false));
+    }
+
     if (this.ui.elements.levelSelectBtns.length > 0) {
       this.ui.elements.levelSelectBtns[0].classList.add("active");
     }
@@ -251,6 +326,8 @@ export class App {
     document.getElementById("menu-btn").addEventListener("click", () => {
       this.endlessMode = false;
       this.endlessSpec = null;
+      this._guidedTutorialRun = false;
+      this._clearGuidedIntroTipTimeouts();
       this._teardownLabUi();
       this.engine.resetGame();
       this.ui.showMenu();
@@ -273,12 +350,17 @@ export class App {
   }
 
   _startLevel(index) {
+    this._clearGuidedIntroTipTimeouts();
+    if (index !== 0) {
+      this._guidedTutorialRun = false;
+    }
     this._teardownLabUi();
     this.endlessMode = false;
     this.endlessSpec = null;
     this.labMode = true;
     this.engine.currentLevelIndex = index;
-    this.currentLevel = this.levels[index];
+    const useGuidedIntro = index === 0 && this._guidedTutorialRun;
+    this.currentLevel = useGuidedIntro ? Level1Guided : this.levels[index];
     this.engine.hintsUsed = 0;
     this._srInvalidActive = false;
 
@@ -307,13 +389,43 @@ export class App {
 
     this._setupLevelUI();
 
-    this.engine.startLevel(this.currentLevel.timeLimit);
+    const guidedNoFuse = index === 0 && this._guidedTutorialRun;
+    this.engine.startLevel(this.currentLevel.timeLimit, { disableTimer: guidedNoFuse });
+    if (guidedNoFuse) {
+      this.ui.updateGuidedTutorialTimer();
+    }
     this._levelPlayStartedAt = Date.now();
     this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
 
     this.tutor.setLevelContext(this.currentLevel.tutorContext);
 
     this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
+
+    if (this.currentLevel.isGuidedIntro) {
+      this._pushGuidedIntroTips();
+    }
+  }
+
+  _clearGuidedIntroTipTimeouts() {
+    for (const tid of this._guidedIntroTipTimeouts) {
+      window.clearTimeout(tid);
+    }
+    this._guidedIntroTipTimeouts = [];
+  }
+
+  _pushGuidedIntroTips() {
+    this._clearGuidedIntroTipTimeouts();
+    const tips = [
+      "Pins **A** and **B** are fixed on the left — **tap the orange circles** beside each letter to flip between **0** and **1**.",
+      "An **AND** gate sits in the middle: its output stays **off** unless **both** inputs are **on**.",
+      "**Drag wires** from any **cyan** output to an **orange** input. Finish three links: **A → AND**, **B → AND**, **AND → X**.",
+      "Tiny LED **X** on the right is your target. Toggle A and B to see whether it matches — when it does for every combo, tap **DISARM**.",
+      "Follow the floating **training checklist**; there is **no fuse** on this first run.",
+    ];
+    tips.forEach((text, i) => {
+      const tid = window.setTimeout(() => this.ui.addChatMessage(text, "system"), 120 + i * 780);
+      this._guidedIntroTipTimeouts.push(tid);
+    });
   }
 
   async _startEndless() {
@@ -402,9 +514,11 @@ export class App {
       getCircuitLab: () => this.circuitLab,
       getRenderer: () => this.renderer,
       getCurrentLevel: () => this.currentLevel,
-      onLabChanged: () => this._labRedraw(),
+      onLabChanged: () => this._onLabUiChanged(),
       addSystemMessage: (text) => this.ui.addChatMessage(text, "system"),
       Level1,
+      getLevel1ForCanvasReset: () =>
+        this._guidedTutorialRun && this.engine.currentLevelIndex === 0 ? Level1Guided : Level1,
       afterClearLevel4: () => Level4.primeLab(this.circuitLab),
       afterCanvasClear: (cur) => this._afterCanvasClear(cur),
     });
@@ -470,6 +584,9 @@ export class App {
     if (level.id === 4) {
       createSequenceTracker();
       resetBtn.style.display = "block";
+    }
+    if (level.id === 1 && level.isGuidedIntro) {
+      createLevel1GuidedCoach(this.circuitLab);
     }
   }
 
@@ -573,6 +690,7 @@ export class App {
       this.engine.score,
       timeBonus,
       () => {
+        this._guidedTutorialRun = false;
         this.engine.resetGame();
         this.ui.showMenu();
       },
@@ -601,6 +719,7 @@ export class App {
     }
     this.ui.elements.modalBtn2.onclick = () => {
       this.ui.hideModal();
+      this._guidedTutorialRun = false;
       this.engine.resetGame();
       this.ui.showMenu();
     };

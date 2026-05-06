@@ -1,4 +1,5 @@
 import { getLevel1CoachState } from "../levels/level1.js";
+import { getLevel1GuidedCoachState } from "../levels/level1Guided.js";
 
 export function teardownLevelOverlayNodes() {
   document
@@ -31,6 +32,73 @@ export function createLevel1Coach(circuitLab) {
   positionLevel1CoachDefault(coach, viewport);
   initLevel1CoachDrag(coach, viewport);
   refreshLevel1CoachFromDom(circuitLab);
+}
+
+/**
+ * @param {any} circuitLab
+ */
+export function createLevel1GuidedCoach(circuitLab) {
+  const viewport = document.querySelector(".circuit-viewport");
+  if (!viewport) return;
+  const coach = document.createElement("div");
+  coach.className = "level1-coach visible level1-coach--guided";
+  coach.id = "level1-coach";
+  coach.innerHTML = `
+      <div class="l1-header">
+        <span class="l1-drag-handle" aria-label="Drag to move checklist" title="Drag to move">⠿</span>
+        <div class="l1-title">TRAINING — WIRE CHECKLIST</div>
+      </div>
+      <div class="l1-hint">We placed the parts; you connect them. Drag **cyan → orange**.</div>
+      <div class="l1-step l1-step-static l1-step-done" data-l1-step="preset">
+        <span class="l1-mark">✓</span><span class="l1-text">Pins **A**, **B**, **AND**, and LED **X** are on the canvas</span>
+      </div>
+      <div class="l1-step" data-l1-step="andins"><span class="l1-mark">○</span><span class="l1-text">Wire **both** **A** and **B** into the AND gate (two orange inputs)</span></div>
+      <div class="l1-step" data-l1-step="xout"><span class="l1-mark">○</span><span class="l1-text">Wire AND’s **cyan output** into LED **X**</span></div>
+      <div class="l1-step l1-step-static" data-l1-step="disarm"><span class="l1-mark">◇</span><span class="l1-text">**DISARM** checks all four A,B combinations — no rush, no fuse here</span></div>
+    `;
+  viewport.appendChild(coach);
+  positionLevel1CoachDefault(coach, viewport);
+  initLevel1CoachDrag(coach, viewport);
+  refreshLevel1GuidedCoachFromDom(circuitLab);
+}
+
+/**
+ * @param {any} circuitLab
+ */
+export function refreshLevel1GuidedCoachFromDom(circuitLab) {
+  const coach = document.getElementById("level1-coach");
+  if (!coach || !coach.classList.contains("level1-coach--guided")) return;
+  refreshLevel1GuidedCoach(coach, () => getLevel1GuidedCoachState(circuitLab));
+}
+
+/**
+ * @param {HTMLElement} coach
+ * @param {() => ReturnType<typeof getLevel1GuidedCoachState>} getState
+ */
+function refreshLevel1GuidedCoach(coach, getState) {
+  const s = getState();
+  const mark = (stepId, done) => {
+    const row = coach.querySelector(`[data-l1-step="${stepId}"]`);
+    if (!row || row.classList.contains("l1-step-static")) return;
+    row.classList.toggle("l1-step-done", !!done);
+    const m = row.querySelector(".l1-mark");
+    if (m) m.textContent = done ? "✓" : "○";
+  };
+  mark("andins", s.bothAndInputs);
+  mark("xout", s.xFed);
+
+  const order = ["andins", "xout"];
+  let firstOpen = true;
+  for (const id of order) {
+    const row = coach.querySelector(`[data-l1-step="${id}"]`);
+    if (!row) continue;
+    row.classList.remove("l1-step-current");
+    const done = id === "andins" ? s.bothAndInputs : s.xFed;
+    if (!done && firstOpen) {
+      row.classList.add("l1-step-current");
+      firstOpen = false;
+    }
+  }
 }
 
 function positionLevel1CoachDefault(coach, viewport) {

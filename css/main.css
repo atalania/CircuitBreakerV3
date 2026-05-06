@@ -339,6 +339,27 @@ body::after {
   transform: translateY(0);
 }
 
+.menu-secondary-btn {
+  margin-top: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.menu-secondary-btn:hover {
+  color: var(--accent-cyan);
+  border-color: var(--accent-blue);
+  box-shadow: var(--glow-blue);
+}
+
 /* ============================================================
    GAME SCREEN
    ============================================================ */
@@ -1224,6 +1245,19 @@ body::after {
 }
 
 .modal-body { margin-bottom: 1.5rem; }
+
+.tutorial-copy {
+  text-align: left;
+  display: grid;
+  gap: 0.45rem;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.tutorial-copy strong {
+  color: var(--text-bright);
+}
 
 .modal-stats {
   text-align: left;

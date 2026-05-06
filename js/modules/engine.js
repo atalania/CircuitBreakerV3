@@ -24,12 +24,19 @@ export class GameEngine {
     this.isPaused = false;
   }
 
-  startLevel(timeLimitSeconds) {
+  /**
+   * @param {number} timeLimitSeconds
+   * @param {{ disableTimer?: boolean }} [options]
+   */
+  startLevel(timeLimitSeconds, options = {}) {
+    const disableTimer = options.disableTimer === true;
     this.timeRemaining = timeLimitSeconds;
     this.state = GameState.PLAYING;
     this.isPaused = false;
     this._emitStateChange();
-    this._startTimer();
+    if (!disableTimer) {
+      this._startTimer();
+    }
   }
 
   _startTimer() {

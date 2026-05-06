@@ -19,6 +19,19 @@ describe("GameEngine", () => {
     expect(engine.timeRemaining).toBeLessThan(5);
   });
 
+  it("startLevel with disableTimer does not count down or fail on time", () => {
+    const engine = new GameEngine();
+    const onTimeUp = vi.fn();
+    engine.onTimeUp = onTimeUp;
+    engine.onTick = vi.fn();
+    engine.startLevel(5, { disableTimer: true });
+    expect(engine.state).toBe(GameState.PLAYING);
+    vi.advanceTimersByTime(2000);
+    expect(engine.timeRemaining).toBe(5);
+    expect(onTimeUp).not.toHaveBeenCalled();
+    expect(engine.onTick).not.toHaveBeenCalled();
+  });
+
   it("invokes onTimeUp and fails when time hits zero", () => {
     const engine = new GameEngine();
     const onTimeUp = vi.fn();

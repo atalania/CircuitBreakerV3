@@ -118,7 +118,8 @@ export function processCampaignLabSubmit(app, res) {
       app.ui.flashCircuit();
       app.ui.addChatMessage(res.message || "", "system");
       app._portalAssistantEvent("correct_submission", {
-        playerAnswer: "DISARM_pass_all_8_rows",
+        playerAnswer:
+          level.isGuidedIntro === true ? "DISARM_pass_guided_intro" : "DISARM_pass_all_8_rows",
         additionalContext: { campaignLevelComplete: true },
       });
       setTimeout(() => app._levelComplete(), 700);
