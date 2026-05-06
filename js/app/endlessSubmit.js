@@ -65,6 +65,7 @@ export function showEndlessRoundComplete(app) {
   if (app.engine.state !== GameState.PLAYING) return;
   app.engine.score += 150;
   app.ui.updateScore(app.engine.score);
+  app._syncPortalHighScore?.(app.engine.score);
   app.ui.showModal(
     "ENDLESS — ROUND CLEARED",
     "<div class='modal-flavor'>Objective satisfied. Grab another AI brief or return to menu.</div>",

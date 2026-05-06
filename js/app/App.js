@@ -29,6 +29,14 @@ import {
 import { processCampaignLabSubmit } from "./campaignSubmit.js";
 import { submitEndlessRound } from "./endlessSubmit.js";
 import { handleJkPulse } from "./jkPulse.js";
+import {
+  fetchPortalGameData,
+  initPortalGameDataBridge,
+  isPortalGameDataActive,
+  normalizePortalGameData,
+  speedScoreFromElapsedMs,
+  updateHighScore,
+} from "../modules/portalGameData.js";
 
 export class App {
   constructor() {
@@ -54,6 +62,12 @@ export class App {
     this._levelPlayStartedAt = 0;
     /** @type {number} monotonically increasing endless request token */
     this._endlessRequestId = 0;
+    /** @type {Record<string, unknown>} */
+    this.portalData = {};
+    /** @type {boolean} */
+    this._portalDataReady = false;
+    /** @type {(() => void) | null} */
+    this._cleanupPortalGameDataBridge = null;
 
     this.labCanvas = new LabCanvasController({
       isLabMode: () => this.labMode,
@@ -139,6 +153,7 @@ export class App {
   init() {
     this.ui.init();
     this.audio.init();
+    this._initPortalGameData();
 
     this.engine.onTick = (t) => this._onTick(t);
     this.engine.onTimeUp = () => this._onTimeUp();
@@ -151,6 +166,35 @@ export class App {
     this._bindGlobalShortcuts();
 
     this.ui.showMenu();
+  }
+
+  async _initPortalGameData() {
+    if (!isPortalGameDataActive()) {
+      this._portalDataReady = true;
+      return;
+    }
+    this._cleanupPortalGameDataBridge = initPortalGameDataBridge();
+    try {
+      const loaded = await fetchPortalGameData();
+      this.portalData = normalizePortalGameData(loaded);
+    } catch {
+      this.portalData = {};
+    } finally {
+      this._portalDataReady = true;
+    }
+  }
+
+  /**
+   * @param {number} runScore
+   */
+  _syncPortalHighScore(runScore) {
+    if (!this._portalDataReady) return;
+    this.portalData = updateHighScore(this.portalData, runScore);
+  }
+
+  _campaignSpeedLeaderboardScore() {
+    const elapsedMs = this._levelPlayStartedAt ? Date.now() - this._levelPlayStartedAt : 0;
+    return speedScoreFromElapsedMs(elapsedMs);
   }
 
   _bindEvents() {
@@ -511,6 +555,10 @@ export class App {
   _levelComplete() {
     if (this.engine.state !== GameState.PLAYING) return;
     this._portalAssistantEvent("level_complete");
+    if (this.currentLevel) {
+      const speedScore = this._campaignSpeedLeaderboardScore();
+      this._syncPortalHighScore(speedScore);
+    }
     const timeBonus = Math.floor(this.engine.timeRemaining * 10);
     this.engine.completeLevel();
 
