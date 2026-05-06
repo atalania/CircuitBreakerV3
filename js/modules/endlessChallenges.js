@@ -112,6 +112,60 @@ function isMajorityObjective(objective) {
   return /\bmajority\b/.test(text) || /\bat least\s+two\b/.test(text) || /\btwo or more\b/.test(text);
 }
 
+function isMuxSelectObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  const cZero = "(?:0|low|false|off)";
+  const cOne = "(?:1|high|true|on)";
+  const mentionsFollowPattern =
+    new RegExp(`when\\s+c\\s*(?:=|is)?\\s*${cZero}[^.]*f\\s+follow(?:s)?\\s+a`).test(text) &&
+    new RegExp(`when\\s+c\\s*(?:=|is)?\\s*${cOne}[^.]*f\\s+follow(?:s)?\\s+b`).test(text);
+  const mentionsSelectPattern =
+    /\bselect\b/.test(text) &&
+    new RegExp(`\\bequal(?:s)?\\s+b\\s+when\\s+c\\s*(?:=|is)?\\s*${cOne}\\b`).test(text) &&
+    new RegExp(`\\b(?:else|otherwise)\\s+a\\b`).test(text);
+  return mentionsFollowPattern || mentionsSelectPattern;
+}
+
+function isAllHighObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\ball\s+1\b/.test(text) || /\ball high\b/.test(text) || /\ba\s+and\s+b\s+and\s+c\b/.test(text);
+}
+
+function isAnyHighObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bat least one\b/.test(text) || /\bany\b/.test(text) || /\ba,\s*b,\s*or\s*c\b/.test(text);
+}
+
+function isNoneHighObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bnone high\b/.test(text) || /\bevery input is 0\b/.test(text) || /\bthree-input nor\b/.test(text);
+}
+
+function isNotAllHighObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bnot all high\b/.test(text) || /\bunless a, b, and c are all 1\b/.test(text) || /\bnand\b/.test(text);
+}
+
+function isExactlyOneObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bexactly one\b/.test(text);
+}
+
+function isExactlyTwoObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bexactly two\b/.test(text);
+}
+
+function isOddParityObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\bodd parity\b/.test(text) || /\bxor of a, b, and c\b/.test(text) || /\bxor3\b/.test(text);
+}
+
+function isEvenParityObjective(objective) {
+  const text = typeof objective === "string" ? objective.toLowerCase() : "";
+  return /\beven parity\b/.test(text) || /\beven number\b/.test(text) || /\bxnor3\b/.test(text);
+}
+
 /**
  * Pick a random fallback challenge. When `recentTitles` is provided, prefer
  * entries the player has not seen recently so endless mode keeps cycling.
@@ -133,6 +187,33 @@ export function randomFallbackChallenge(recentTitles = []) {
 export function normalizeTruthTableForObjective(objective, table) {
   if (isMajorityObjective(objective)) {
     return tableFromFn((a, b, c) => a + b + c >= 2);
+  }
+  if (isMuxSelectObjective(objective)) {
+    return tableFromFn((a, b, c) => (c ? b : a));
+  }
+  if (isAllHighObjective(objective)) {
+    return tableFromFn((a, b, c) => a && b && c);
+  }
+  if (isAnyHighObjective(objective)) {
+    return tableFromFn((a, b, c) => a || b || c);
+  }
+  if (isNoneHighObjective(objective)) {
+    return tableFromFn((a, b, c) => !a && !b && !c);
+  }
+  if (isNotAllHighObjective(objective)) {
+    return tableFromFn((a, b, c) => !(a && b && c));
+  }
+  if (isExactlyOneObjective(objective)) {
+    return tableFromFn((a, b, c) => a + b + c === 1);
+  }
+  if (isExactlyTwoObjective(objective)) {
+    return tableFromFn((a, b, c) => a + b + c === 2);
+  }
+  if (isOddParityObjective(objective)) {
+    return tableFromFn((a, b, c) => (a ^ b ^ c) & 1);
+  }
+  if (isEvenParityObjective(objective)) {
+    return tableFromFn((a, b, c) => 1 - ((a ^ b ^ c) & 1));
   }
   return table;
 }

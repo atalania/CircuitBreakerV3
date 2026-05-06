@@ -66,13 +66,27 @@ describe("portalGameData", () => {
     const unchanged = updateHighScore({ highScore: 400 }, 390);
     expect(unchanged).toEqual({ highScore: 400 });
 
-    const next = updateHighScore({ highScore: 400 }, 450);
-    expect(next).toEqual({ highScore: 450 });
+    const next = updateHighScore({ highScore: 400 }, 450, { mode: "campaign", elapsedMs: 12000 });
+    expect(next).toEqual({
+      highScore: 450,
+      score: 450,
+      scoreMeta: { mode: "campaign", elapsedMs: 12000 },
+    });
     expect(postMessage).toHaveBeenCalledTimes(1);
     expect(postMessage).toHaveBeenLastCalledWith(
-      { type: "PORTAL_GAME_DATA_SAVE", payload: { highScore: 450 } },
+      {
+        type: "PORTAL_GAME_DATA_SAVE",
+        payload: { highScore: 450, score: 450, scoreMeta: { mode: "campaign", elapsedMs: 12000 } },
+      },
       expect.any(String)
     );
+  });
+
+  it("uses score as fallback previous best when highScore missing", () => {
+    const { postMessage } = mockIframeWindow();
+    const unchanged = updateHighScore({ score: 500 }, 499);
+    expect(unchanged).toEqual({ score: 500 });
+    expect(postMessage).not.toHaveBeenCalled();
   });
 
   it("maps elapsed milliseconds to leaderboard speed score", () => {

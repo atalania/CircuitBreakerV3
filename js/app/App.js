@@ -187,9 +187,9 @@ export class App {
   /**
    * @param {number} runScore
    */
-  _syncPortalHighScore(runScore) {
+  _syncPortalHighScore(runScore, scoreMeta = {}) {
     if (!this._portalDataReady) return;
-    this.portalData = updateHighScore(this.portalData, runScore);
+    this.portalData = updateHighScore(this.portalData, runScore, scoreMeta);
   }
 
   _campaignSpeedLeaderboardScore() {
@@ -556,8 +556,14 @@ export class App {
     if (this.engine.state !== GameState.PLAYING) return;
     this._portalAssistantEvent("level_complete");
     if (this.currentLevel) {
+      const elapsedMs = this._levelPlayStartedAt ? Math.max(0, Date.now() - this._levelPlayStartedAt) : 0;
       const speedScore = this._campaignSpeedLeaderboardScore();
-      this._syncPortalHighScore(speedScore);
+      this._syncPortalHighScore(speedScore, {
+        mode: "campaign",
+        metric: "speed_normalized",
+        elapsedMs,
+        levelId: this.currentLevel.id,
+      });
     }
     const timeBonus = Math.floor(this.engine.timeRemaining * 10);
     this.engine.completeLevel();

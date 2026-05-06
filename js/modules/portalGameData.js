@@ -73,13 +73,18 @@ export function mergeAndSavePortalGameData(currentData, patch) {
   return next;
 }
 
-export function updateHighScore(currentData, runScore) {
+export function updateHighScore(currentData, runScore, scoreMeta = {}) {
   const data = normalizePortalGameData(currentData);
-  const prev = Number(data.highScore ?? 0);
+  const prev = Math.max(Number(data.highScore ?? 0), Number(data.score ?? 0));
   const score = Number(runScore);
   if (!Number.isFinite(score)) return data;
   if (score <= prev) return data;
-  const next = { ...data, highScore: score };
+  const next = {
+    ...data,
+    highScore: score,
+    score,
+    scoreMeta: normalizePortalGameData(scoreMeta),
+  };
   savePortalGameData(next);
   return next;
 }

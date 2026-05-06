@@ -83,4 +83,135 @@ describe("normalizeTruthTableForObjective", () => {
       "111": { F: 1 },
     });
   });
+
+  it("uses a mux table when objective says C=0 follows A and C=1 follows B", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: a && b ? 1 : 0 };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective(
+      "Use pins A, B, and C to control the LED F. When C is 0, F follows A; when C is 1, F follows B.",
+      wrongTable
+    );
+
+    expect(table).toEqual({
+      "000": { F: 0 },
+      "001": { F: 0 },
+      "010": { F: 0 },
+      "011": { F: 1 },
+      "100": { F: 1 },
+      "101": { F: 0 },
+      "110": { F: 1 },
+      "111": { F: 1 },
+    });
+  });
+
+  it("uses a mux table for low/high wording and otherwise phrasing", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: a && b ? 1 : 0 };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective(
+      "C is the select line: F equals B when C is high, otherwise A.",
+      wrongTable
+    );
+
+    expect(table).toEqual({
+      "000": { F: 0 },
+      "001": { F: 0 },
+      "010": { F: 0 },
+      "011": { F: 1 },
+      "100": { F: 1 },
+      "101": { F: 0 },
+      "110": { F: 1 },
+      "111": { F: 1 },
+    });
+  });
+
+  it("uses a mux table for false/true follow wording", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: c };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective(
+      "When C is false, F follows A; when C is true, F follows B.",
+      wrongTable
+    );
+
+    expect(table).toEqual({
+      "000": { F: 0 },
+      "001": { F: 0 },
+      "010": { F: 0 },
+      "011": { F: 1 },
+      "100": { F: 1 },
+      "101": { F: 0 },
+      "110": { F: 1 },
+      "111": { F: 1 },
+    });
+  });
+
+  it("uses all-high table when objective is three-input AND wording", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: (a ^ b ^ c) & 1 };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective("Light F only when A AND B AND C are all 1.", wrongTable);
+    expect(table["111"].F).toBe(1);
+    expect(table["110"].F).toBe(0);
+    expect(table["001"].F).toBe(0);
+  });
+
+  it("uses odd-parity table when objective says odd parity", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: a && b && c ? 1 : 0 };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective("Make F the odd parity output of A, B, C.", wrongTable);
+    expect(table["000"].F).toBe(0);
+    expect(table["001"].F).toBe(1);
+    expect(table["011"].F).toBe(0);
+    expect(table["111"].F).toBe(1);
+  });
+
+  it("uses exactly-two table when objective says exactly two inputs are high", () => {
+    const wrongTable = {};
+    for (let a = 0; a <= 1; a++) {
+      for (let b = 0; b <= 1; b++) {
+        for (let c = 0; c <= 1; c++) {
+          wrongTable[`${a}${b}${c}`] = { F: c };
+        }
+      }
+    }
+
+    const table = normalizeTruthTableForObjective("F is 1 only when exactly two of A, B, C are high.", wrongTable);
+    expect(table["011"].F).toBe(1);
+    expect(table["101"].F).toBe(1);
+    expect(table["110"].F).toBe(1);
+    expect(table["111"].F).toBe(0);
+  });
 });
