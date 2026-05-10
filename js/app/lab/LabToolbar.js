@@ -2,9 +2,26 @@ import { isValidLabPlaceKind } from "./isValidLabPlaceKind.js";
 import { labBlockIdFromElement } from "./labBlockIdFromElement.js";
 import { svgClientToSvg } from "./svgClientToSvg.js";
 
-/** Matches css/responsive.css — tap-to-place palette only on small viewports. */
-function isMobilePaletteUi() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
+/** Squared px movement below this counts as a tap (not scroll / drag). */
+const TAP_MOVE_THRESH2 = 14 * 14;
+
+/**
+ * True when drag-from-palette is unreliable (touch) or layout matches mobile breakpoints.
+ * Coarse-pointer catches phones in wide iframes and “desktop site” layouts.
+ */
+function shouldUseTapPlace() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(max-width: 900px)").matches
+  );
+}
+
+function tapPlaceMediaQueries() {
+  return [
+    window.matchMedia("(max-width: 900px)"),
+    window.matchMedia("(pointer: coarse)"),
+  ];
 }
 
 /**
@@ -34,6 +51,10 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
   bar.id = "lab-toolbar";
   bar.className = "lab-toolbar";
   bar.innerHTML = `
+      <p class="lab-tap-place-hint" role="note" aria-live="polite">
+        <strong>How to place parts:</strong> Tap a chip below to select it, then tap an <em>empty</em> spot on the dark circuit canvas to drop it there.
+        Tap the same chip again to cancel. (Drag-from-palette is for a mouse.)
+      </p>
       <span class="lab-toolbar-label">INPUTS</span>
       <div class="lab-palette-chip" draggable="true" data-lab-place="in:A" title="Pin A">A</div>
       <div class="lab-palette-chip" draggable="true" data-lab-place="in:B" title="Pin B">B</div>
@@ -77,6 +98,11 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
 
   /** @type {string | null} */
   let pendingPlaceKind = null;
+  /** Touch “tap workspace” bookkeeping (movement threshold filters scroll). */
+  /** @type {{ pointerId: number, x: number, y: number } | null} */
+  let circuitTapStart = null;
+  /** @type {WeakMap<Element, { pointerId: number, x: number, y: number }>} */
+  const chipTapStarts = new WeakMap();
 
   const setPendingPlaceKind = (kind) => {
     pendingPlaceKind = kind;
@@ -90,9 +116,37 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
     }
   };
 
+  const toggleChipPalette = (place) => {
+    if (!isValidLabPlaceKind(place)) return;
+    if (pendingPlaceKind === place) {
+      setPendingPlaceKind(null);
+    } else {
+      setPendingPlaceKind(place);
+      const lab = host.getCircuitLab();
+      if (lab.tool === "erase") {
+        lab.tool = null;
+        bar.querySelectorAll(".lab-tool").forEach((b) => b.classList.remove("active"));
+      }
+    }
+  };
+
+  const applyTapPlaceEnv = () => {
+    const tap = shouldUseTapPlace();
+    bar.classList.toggle("lab-toolbar--tap-place", tap);
+    bar.querySelectorAll("[data-lab-place]").forEach((chipEl) => {
+      chipEl.draggable = !tap;
+    });
+  };
+
+  const onTapPlaceMediaOrResize = () => applyTapPlaceEnv();
+  applyTapPlaceEnv();
+  const tapPlaceMqs = tapPlaceMediaQueries();
+  tapPlaceMqs.forEach((mq) => mq.addEventListener("change", onTapPlaceMediaOrResize));
+  window.addEventListener("resize", onTapPlaceMediaOrResize);
+
   bar.querySelectorAll("[data-lab-place]").forEach((chip) => {
     chip.addEventListener("dragstart", (e) => {
-      if (isMobilePaletteUi()) {
+      if (shouldUseTapPlace()) {
         e.preventDefault();
         return;
       }
@@ -101,50 +155,78 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
       e.dataTransfer.effectAllowed = "copy";
     });
 
-    chip.addEventListener("click", (e) => {
-      if (!isMobilePaletteUi() || !host.isLabMode()) return;
+    chip.addEventListener("pointerdown", (e) => {
+      if (!shouldUseTapPlace() || !host.isLabMode()) return;
+      chipTapStarts.set(chip, { pointerId: e.pointerId, x: e.clientX, y: e.clientY });
+    });
+
+    chip.addEventListener("pointerup", (e) => {
+      if (!shouldUseTapPlace() || !host.isLabMode()) return;
+      const start = chipTapStarts.get(chip);
+      chipTapStarts.delete(chip);
+      if (!start || start.pointerId !== e.pointerId) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (dx * dx + dy * dy > TAP_MOVE_THRESH2) return;
+      const place = chip.getAttribute("data-lab-place") || "";
       e.preventDefault();
       e.stopPropagation();
-      const place = chip.getAttribute("data-lab-place") || "";
-      if (!isValidLabPlaceKind(place)) return;
-      if (pendingPlaceKind === place) {
-        setPendingPlaceKind(null);
-      } else {
-        setPendingPlaceKind(place);
-        const lab = host.getCircuitLab();
-        if (lab.tool === "erase") {
-          lab.tool = null;
-          bar.querySelectorAll(".lab-tool").forEach((b) => b.classList.remove("active"));
-        }
-      }
+      toggleChipPalette(place);
     });
+
+    chip.addEventListener("pointercancel", () => chipTapStarts.delete(chip));
   });
 
-  /**
-   * Second tap on the canvas drops the selected palette item (touch / narrow UI).
-   * Uses `click` so panning/scrolling the viewport does not fire on pointerdown.
-   */
-  const onMobileCanvasPlaceClick = (e) => {
-    if (!isMobilePaletteUi() || !pendingPlaceKind || !host.isLabMode()) return;
-    const t = e.target;
-    if (!(t instanceof Element)) return;
-    if (t.closest("#lab-toolbar")) return;
+  /* Bubble phase so canvas / LabCanvasController handlers still receive the same gestures. */
+  const circuitPointerDownTap = (e) => {
+    if (!shouldUseTapPlace() || !pendingPlaceKind || !host.isLabMode() || !circuitDropEl) return;
     const svg = host.getRenderer()?.svg;
-    if (!svg || !svg.contains(t)) return;
-    if (t.closest(".lab-port")) return;
-    if (labBlockIdFromElement(t)) return;
-    if (t.closest("[data-lab-wire-id]")) return;
+    if (!svg) return;
+    const r = svg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    circuitTapStart = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
+  };
 
-    const { x, y } = svgClientToSvg(svg, e.clientX, e.clientY);
-    host.getCircuitLab().placeAt(pendingPlaceKind, x, y);
+  const circuitPointerUpTap = (e) => {
+    if (!shouldUseTapPlace() || !pendingPlaceKind || !host.isLabMode() || !circuitDropEl) return;
+    const svg = host.getRenderer()?.svg;
+    if (!svg || !circuitTapStart || circuitTapStart.pointerId !== e.pointerId) {
+      circuitTapStart = null;
+      return;
+    }
+    const dx = e.clientX - circuitTapStart.x;
+    const dy = e.clientY - circuitTapStart.y;
+    circuitTapStart = null;
+    if (dx * dx + dy * dy > TAP_MOVE_THRESH2) return;
+
+    const cx = e.clientX;
+    const cy = e.clientY;
+    const svgRect = svg.getBoundingClientRect();
+    if (cx < svgRect.left || cx > svgRect.right || cy < svgRect.top || cy > svgRect.bottom) return;
+
+    const hit = document.elementFromPoint(cx, cy);
+    if (!hit || !(hit instanceof Element)) return;
+    if (!circuitDropEl.contains(hit)) return;
+    if (hit.closest("#lab-toolbar")) return;
+    if (hit.closest(".lab-port")) return;
+    if (labBlockIdFromElement(hit)) return;
+    if (hit.closest("[data-lab-wire-id]")) return;
+
+    const kind = pendingPlaceKind;
+    const { x, y } = svgClientToSvg(svg, cx, cy);
+    host.getCircuitLab().placeAt(kind, x, y);
     host.onLabChanged();
     setPendingPlaceKind(null);
-    e.preventDefault();
-    e.stopImmediatePropagation();
+  };
+
+  const circuitPointerCancelTap = (e) => {
+    if (circuitTapStart && circuitTapStart.pointerId === e.pointerId) circuitTapStart = null;
   };
 
   if (circuitDropEl) {
-    circuitDropEl.addEventListener("click", onMobileCanvasPlaceClick, true);
+    circuitDropEl.addEventListener("pointerdown", circuitPointerDownTap);
+    circuitDropEl.addEventListener("pointerup", circuitPointerUpTap);
+    circuitDropEl.addEventListener("pointercancel", circuitPointerCancelTap);
   }
 
   const onDragOver = (e) => {
@@ -210,10 +292,14 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
 
   return {
     remove: () => {
+      tapPlaceMqs.forEach((mq) => mq.removeEventListener("change", onTapPlaceMediaOrResize));
+      window.removeEventListener("resize", onTapPlaceMediaOrResize);
       if (circuitDropEl) {
         circuitDropEl.removeEventListener("dragover", onDragOver, true);
         circuitDropEl.removeEventListener("drop", onDrop, true);
-        circuitDropEl.removeEventListener("click", onMobileCanvasPlaceClick, true);
+        circuitDropEl.removeEventListener("pointerdown", circuitPointerDownTap);
+        circuitDropEl.removeEventListener("pointerup", circuitPointerUpTap);
+        circuitDropEl.removeEventListener("pointercancel", circuitPointerCancelTap);
       }
       if (viewport) viewport.classList.remove("lab-palette-pending-drop");
       bar.remove();

@@ -1,5 +1,36 @@
 /* Circuit lab palette toolbar */
 /* ---- Circuit Lab toolbar ---- */
+/* Shown only when .lab-toolbar--tap-place is set by JS */
+.lab-tap-place-hint {
+  display: none;
+  flex-basis: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.45rem 0.55rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.38;
+  color: #b8eaf8;
+  background: rgba(61, 184, 255, 0.09);
+  border: 1px solid rgba(66, 232, 255, 0.35);
+  border-radius: 6px;
+}
+
+.lab-toolbar--tap-place .lab-tap-place-hint {
+  display: block;
+}
+
+.lab-tap-place-hint strong {
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.lab-tap-place-hint em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--hazard-yellow);
+}
+
 .lab-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -174,4 +205,22 @@
 
 .level-select-btn.lab-btn .lvl-num {
   color: var(--accent-cyan);
+}
+
+/* Tap-to-place (touch / narrow layout): visual feedback at any width once JS enables tap mode */
+.lab-toolbar--tap-place .lab-palette-chip {
+  touch-action: manipulation;
+}
+
+.lab-palette-chip.lab-palette-chip--pending {
+  box-shadow:
+    0 0 0 2px rgba(66, 232, 255, 0.85),
+    0 0 18px rgba(61, 184, 255, 0.35);
+  border-color: rgba(66, 232, 255, 0.85);
+}
+
+.circuit-viewport.lab-palette-pending-drop {
+  box-shadow:
+    inset 0 0 0 2px rgba(66, 232, 255, 0.35),
+    0 0 0 1px rgba(232, 188, 8, 0.12);
 }
