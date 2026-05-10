@@ -54,7 +54,11 @@
     max-width: min(100%, 26rem);
     margin-left: auto;
     margin-right: auto;
-    padding: 1.25rem 1rem;
+    padding: 1.25rem 1rem calc(1.25rem + 12px) 1rem;
+  }
+
+  .menu-frame-hazard--bottom {
+    height: 10px;
   }
 
   .menu-classification {
@@ -196,10 +200,17 @@
     min-height: 0;
   }
 
+  /* Lab toolbar lives *above* .circuit-viewport; panel must scroll so canvas/actions
+     aren’t trapped under a multi-row palette (PC keeps overflow hidden in circuit-panel.css). */
   .circuit-panel {
     flex: 1 1 auto;
     min-height: 0;
     padding: 0.45rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
 
   .objective-bar {
@@ -224,7 +235,9 @@
   }
 
   .circuit-viewport {
-    min-height: 0;
+    flex: 1 1 auto;
+    /* min-height can exceed the flex slot → .circuit-panel scrolls instead of a ~0px canvas */
+    min-height: clamp(220px, 48vh, 520px);
     border-width: 1px;
     -webkit-overflow-scrolling: touch;
   }
