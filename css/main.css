@@ -1206,6 +1206,76 @@ body::after {
   letter-spacing: 0.15em;
 }
 
+/* Pinned level concept recap (same column as Ordnance Officer feed) */
+.chat-concept-ref {
+  flex-shrink: 0;
+  margin-left: 10px;
+  padding: 0.45rem 0.65rem 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--border-dim);
+  background: linear-gradient(180deg, rgba(232, 188, 8, 0.06), transparent 70%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  max-height: min(240px, 34vh);
+}
+
+.chat-concept-ref[hidden] {
+  display: none !important;
+}
+
+.chat-concept-ref-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.chat-concept-ref-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: var(--hazard-yellow);
+}
+
+.chat-concept-ref-sub {
+  font-size: 0.52rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.chat-concept-ref-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-right: 0.15rem;
+}
+
+.chat-concept-ref-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-concept-ref-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-dim);
+  border-radius: 2px;
+}
+
+.chat-concept-ref-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-blue);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}
+
+.chat-concept-ref-scroll .tutorial-copy {
+  font-size: 0.78rem;
+  gap: 0.35rem;
+}
+
 #chat-messages {
   flex: 1;
   overflow-y: auto;

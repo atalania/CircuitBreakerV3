@@ -8,6 +8,17 @@ export const Level4 = {
   id: 4,
   title: "JK FLIP-FLOP",
   subtitle: "CLOCK • TOGGLE • STATE",
+  preLevelBriefing: {
+    title: "CONCEPTS — WHAT IS A JK?",
+    bodyHtml: `
+      <div class="tutorial-copy">
+        <p>A <strong>JK flip-flop</strong> is <strong>clocked memory</strong>: it has data inputs <strong>J</strong> and <strong>K</strong>, and a stored output <strong>Q</strong>. The stored value only updates on a <strong>clock edge</strong> (here: each time you <strong>tap the JK module</strong> to pulse the clock).</p>
+        <p><strong>J=0, K=0</strong> — no change (Q stays). <strong>J=1, K=0</strong> — set Q toward 1. <strong>J=0, K=1</strong> — reset Q toward 0.</p>
+        <p><strong>J=1, K=1</strong> — <strong>toggle</strong>: Q flips on the clock pulse (unlike a plain SR latch, both inputs high is allowed and means “invert Q”).</p>
+        <p>Wire <strong>J</strong>, <strong>K</strong>, and LED <strong>Q</strong> to the block, set pins, then pulse until the required Q sequence matches.</p>
+      </div>
+    `,
+  },
   timeLimit: 220,
   objective:
     "Wire J, K, and LED Q to a JK FF module. Tap the JK box to pulse the clock. Drive Q through 1 → 0 → 1 → 1 across four pulses (use REWIND if you slip). DISARM is hidden — only pulses count.",

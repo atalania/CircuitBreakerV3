@@ -91,6 +91,17 @@ export const Level1Guided = {
   isGuidedIntro: true,
   title: "GUIDED: FIRST AND GATE",
   subtitle: "PLACE & WIRE",
+  preLevelBriefing: {
+    title: "CONCEPTS — YOUR FIRST AND",
+    bodyHtml: `
+      <div class="tutorial-copy">
+        <p><strong>AND</strong> — output is <strong>1</strong> only when <strong>both</strong> inputs are 1. If either input is 0, the output is 0.</p>
+        <p><strong>Pins A and B</strong> are inputs you place from the bar; <strong>tap</strong> their orange rings to flip 0/1.</p>
+        <p><strong>Wiring</strong> — drag from a <strong>cyan</strong> output dot to an <strong>orange</strong> input dot. Here you will connect A and B into the AND, and the AND into LED <strong>X</strong>.</p>
+        <p><strong>DISARM</strong> checks all four A,B combinations so X really equals A·B.</p>
+      </div>
+    `,
+  },
   timeLimit: 300,
   objective:
     "**Training charge** — drag **A** and **B** from **INPUTS**, **AND** from **GATES**, and **LED X** from **OUTPUT LEDs** onto the canvas. Then wire **cyan → orange**: **A** and **B** into the **AND**, **AND** out into **X**. **Tap** the orange pin rings to flip **0/1**. **DISARM** checks all four **A,B** combos.",

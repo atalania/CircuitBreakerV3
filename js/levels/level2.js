@@ -8,6 +8,16 @@ export const Level2 = {
   id: 2,
   title: "TRUTH TABLE DECODE",
   subtitle: "XOR • NAND",
+  preLevelBriefing: {
+    title: "CONCEPTS — XOR & NAND",
+    bodyHtml: `
+      <div class="tutorial-copy">
+        <p><strong>XOR</strong> (“exclusive OR”) — output is <strong>1</strong> when inputs are <strong>different</strong> (one 0 and one 1). Same inputs → 0.</p>
+        <p><strong>NAND</strong> — “NOT AND”: output is 0 <strong>only</strong> when <strong>both</strong> inputs are 1; otherwise 1. You can read it as NOT( (input1) AND (input2) ).</p>
+        <p>This level wants <strong>Q = (A XOR B) NAND C</strong>. You build that with gates, then use <strong>DISARM</strong> on each A,B,C row where Q should be 1 until the table is complete.</p>
+      </div>
+    `,
+  },
   timeLimit: 200,
   objective:
     "Build a circuit with pins A, B, C and LED Q so that Q = (A XOR B) NAND C. Tap pins to try combos: each time Q is 1, DISARM to mark that row. Mark all six winning rows before the fuse expires.",

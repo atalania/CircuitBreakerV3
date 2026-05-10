@@ -36,6 +36,17 @@ export const Level1 = {
   id: 1,
   title: "GATE FUNDAMENTALS",
   subtitle: "AND • OR • NOT",
+  preLevelBriefing: {
+    title: "CONCEPTS — COMBINATIONAL GATES",
+    bodyHtml: `
+      <div class="tutorial-copy">
+        <p><strong>AND</strong> — output is <strong>1</strong> only when <strong>every</strong> input is 1 (think “all conditions true”).</p>
+        <p><strong>OR</strong> — output is <strong>1</strong> if <strong>any</strong> input is 1 (“at least one path is hot”).</p>
+        <p><strong>NOT</strong> — one input; output is the <strong>opposite</strong> bit (0↔1).</p>
+        <p>This charge needs three expressions at once: <strong>X = A·B</strong>, <strong>Y = NOT C</strong>, <strong>Z = B OR C</strong>. Drag pins, drop gates, wire <strong>cyan → orange</strong>, then <strong>DISARM</strong> checks all eight input combinations.</p>
+      </div>
+    `,
+  },
   clearCanvasHint:
     "Canvas reset: LEDs X/Y/Z restored. Drag pins **A**, **B**, **C** from INPUTS onto the canvas if you wiped them.",
   timeLimit: 240,

@@ -28,6 +28,9 @@ export class UIManager {
       objectiveText: document.getElementById("objective-text"),
       // Chat / Tutor
       chatPanel: document.getElementById("chat-panel"),
+      chatConceptRef: document.getElementById("chat-concept-ref"),
+      chatConceptRefTitle: document.getElementById("chat-concept-ref-title"),
+      chatConceptRefBody: document.getElementById("chat-concept-ref-body"),
       chatMessages: document.getElementById("chat-messages"),
       chatInput: document.getElementById("chat-input"),
       chatSendBtn: document.getElementById("chat-send-btn"),
@@ -194,6 +197,33 @@ export class UIManager {
   clearChat() {
     this.elements.chatMessages.innerHTML = "";
     this.chatMessages = [];
+    this.clearConceptReferencePanel();
+  }
+
+  /**
+   * Pinned recap of `preLevelBriefing` in the right column (trusted HTML from level modules).
+   * @param {string} title
+   * @param {string} bodyHtml
+   */
+  setConceptReferencePanel(title, bodyHtml) {
+    const wrap = this.elements.chatConceptRef;
+    const titleEl = this.elements.chatConceptRefTitle;
+    const bodyEl = this.elements.chatConceptRefBody;
+    if (!wrap || !titleEl || !bodyEl) return;
+    titleEl.textContent = title;
+    bodyEl.innerHTML = bodyHtml;
+    wrap.removeAttribute("hidden");
+  }
+
+  /** Hide pinned concept recap (also called from clearChat). */
+  clearConceptReferencePanel() {
+    const wrap = this.elements.chatConceptRef;
+    const titleEl = this.elements.chatConceptRefTitle;
+    const bodyEl = this.elements.chatConceptRefBody;
+    if (!wrap || !titleEl || !bodyEl) return;
+    titleEl.textContent = "";
+    bodyEl.innerHTML = "";
+    wrap.setAttribute("hidden", "");
   }
 
   // ---- Modals ----

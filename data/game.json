@@ -1,7 +1,7 @@
 {
   "game-id": "circuit-breaker",
   "title": "Circuit Breaker",
-  "subject": "Science",
+  "subject": "Engineering",
   "description": "Digital logic bomb-defusal trainer: gates, latches, truth tables, and an AI tutor.",
   "longDescription": [
     "Circuit Breaker is a circuit-lab style trainer where each level is a timed \"charge\" to disarm by building or adjusting logic: AND, OR, NOT, and flip-flops.",

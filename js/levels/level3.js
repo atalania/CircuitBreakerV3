@@ -8,6 +8,17 @@ export const Level3 = {
   id: 3,
   title: "SR LATCH LOCKDOWN",
   subtitle: "SET • RESET • MEMORY",
+  preLevelBriefing: {
+    title: "CONCEPTS — SR LATCH",
+    bodyHtml: `
+      <div class="tutorial-copy">
+        <p>An <strong>SR latch</strong> is a tiny <strong>memory</strong>: it holds a stored bit <strong>Q</strong> (and its complement on <strong>Qn</strong>) even after you release the inputs.</p>
+        <p><strong>S (Set)</strong> — tends to drive Q toward <strong>1</strong>. <strong>R (Reset)</strong> — tends to drive Q toward <strong>0</strong>.</p>
+        <p><strong>S=0, R=0</strong> — “hold”: the latch keeps whatever Q was. <strong>S=1, R=0</strong> sets; <strong>S=0, R=1</strong> resets.</p>
+        <p><strong>Never hold S and R both at 1</strong> — that is an invalid/forbidden input pattern for this simplified latch.</p>
+      </div>
+    `,
+  },
   timeLimit: 200,
   objective:
     "Place SR LATCH plus input pins S and R. Wire outQ to LED Q and outQbar to LED Qn. Toggle pins and DISARM after each checklist line (never hold S=R=1).",

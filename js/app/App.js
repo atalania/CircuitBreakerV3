@@ -389,6 +389,10 @@ export class App {
     this.ui.updateObjective(this.currentLevel.objective);
     this.ui.updateScore(this.engine.score);
     this.ui.clearChat();
+    const briefing = this.currentLevel.preLevelBriefing;
+    if (briefing) {
+      this.ui.setConceptReferencePanel(briefing.title, briefing.bodyHtml);
+    }
 
     this._mountLabToolbar();
     this._labRedraw();
@@ -398,17 +402,45 @@ export class App {
 
     this._setupLevelUI();
 
+    this.tutor.setLevelContext(this.currentLevel.tutorContext);
+    this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
+
     const guidedNoFuse = index === 0 && this._guidedTutorialRun;
+    this._primeFuseHudBeforeBriefing(guidedNoFuse);
+
+    if (briefing) {
+      this.ui.showModal(briefing.title, briefing.bodyHtml, "BEGIN", () => this._kickoffLevelPlay(guidedNoFuse), null, null);
+    } else {
+      this._kickoffLevelPlay(guidedNoFuse);
+    }
+  }
+
+  /**
+   * Show full fuse / practice HUD before the engine timer starts (briefing modal).
+   * @param {boolean} guidedNoFuse
+   */
+  _primeFuseHudBeforeBriefing(guidedNoFuse) {
+    if (guidedNoFuse) {
+      this.ui.updateGuidedTutorialTimer();
+      return;
+    }
+    const limit = this.currentLevel.timeLimit;
+    this.ui.updateTimer(limit, limit);
+  }
+
+  /**
+   * Start countdown, analytics, and in-run narration after optional concept briefing.
+   * @param {boolean} guidedNoFuse
+   */
+  _kickoffLevelPlay(guidedNoFuse) {
     this.engine.startLevel(this.currentLevel.timeLimit, { disableTimer: guidedNoFuse });
     if (guidedNoFuse) {
       this.ui.updateGuidedTutorialTimer();
+    } else {
+      this.ui.updateTimer(this.engine.timeRemaining, this.currentLevel.timeLimit);
     }
     this._levelPlayStartedAt = Date.now();
     this._portalAssistantEvent("level_start", { hintCount: 0, timeSpentSeconds: 0 });
-
-    this.tutor.setLevelContext(this.currentLevel.tutorContext);
-
-    this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
 
     if (this.currentLevel.isGuidedIntro) {
       this._beginGuidedSequentialCoach();

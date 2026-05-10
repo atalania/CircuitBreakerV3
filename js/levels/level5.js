@@ -8,6 +8,16 @@ export const Level5 = {
   id: 5,
   title: "BOOLEAN GAUNTLET",
   subtitle: "SIMPLIFY • VERIFY • DEFUSE",
+  preLevelBriefing: {
+    title: "CONCEPTS — BOOLEAN EXPRESSION",
+    bodyHtml: `
+      <div class="tutorial-copy">
+        <p>You are implementing one Boolean function <strong>F(A,B,C)</strong> with wires and gates. <strong>·</strong> is AND, <strong>+</strong> is OR, <strong>¬</strong> (or A′) is NOT.</p>
+        <p>Target: <strong>F = (A·B) + (¬A·C) + (B·C)</strong> — three <strong>product</strong> terms OR’d together (a sum-of-products form).</p>
+        <p><strong>DISARM</strong> when <strong>F=1</strong> logs that input row. Find every A,B,C combination where the algebra says F should be 1 (four “minterms” here) before the fuse runs out.</p>
+      </div>
+    `,
+  },
   timeLimit: 240,
   objective:
     "Build F = (A·B) + (¬A·C) + (B·C) with pins A,B,C and LED F. Each DISARM when F=1 marks that input row. Capture all four minterms before time runs out.",
