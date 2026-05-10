@@ -79,7 +79,8 @@
   );
   opacity: 0.85;
   pointer-events: none;
-  z-index: 2;
+  /* Below .menu-container so stripes never block level / start controls */
+  z-index: 0;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
 }
 
@@ -92,6 +93,7 @@
   padding: 2.25rem 2rem;
   position: relative;
   z-index: 1;
+  isolation: isolate;
   background:
     linear-gradient(145deg, rgba(22, 19, 17, 0.92), rgba(12, 10, 8, 0.96));
   border: 2px solid var(--border-dim);

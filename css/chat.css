@@ -25,9 +25,12 @@
   );
   opacity: 0.85;
   pointer-events: none;
+  z-index: 0;
 }
 
 .chat-header {
+  position: relative;
+  z-index: 1;
   padding: 0.65rem 1rem 0.65rem 1.15rem;
   margin-left: 10px;
   border-bottom: 1px solid var(--border-dim);
@@ -55,6 +58,8 @@
 
 /* Pinned level concept recap (same column as Ordnance Officer feed) */
 .chat-concept-ref {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   margin-left: 10px;
   padding: 0.45rem 0.65rem 0.5rem 0.25rem;
@@ -124,8 +129,12 @@
 }
 
 #chat-messages {
+  position: relative;
+  z-index: 1;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0.8rem 0.8rem 0.8rem 1.15rem;
   display: flex;
   flex-direction: column;
@@ -205,6 +214,8 @@
 
 /* Chat input area */
 .chat-input-area {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 0.4rem;
   padding: 0.6rem 0.6rem 0.6rem 1.15rem;

@@ -24,14 +24,25 @@
 
   #menu-screen {
     justify-content: flex-start;
+    /* iOS / mobile: stable viewport height + reliable touch scroll */
+    height: 100%;
+    max-height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
     padding: max(1.25rem, env(safe-area-inset-top)) 0.85rem max(1rem, env(safe-area-inset-bottom));
   }
 
   .menu-bomb-silhouette {
-    width: min(92vw, 340px);
-    height: min(92vw, 340px);
-    top: 35%;
+    width: min(88vw, 300px);
+    height: min(88vw, 300px);
+    top: 28%;
+    opacity: 0.45;
   }
 
   .menu-hazard-edge {
@@ -39,7 +50,10 @@
   }
 
   .menu-container {
-    width: min(100%, 31rem);
+    width: 100%;
+    max-width: min(100%, 26rem);
+    margin-left: auto;
+    margin-right: auto;
     padding: 1.25rem 1rem;
   }
 
@@ -70,17 +84,26 @@
   }
 
   .level-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 1.15rem;
+    width: 100%;
   }
 
   .level-select-btn {
+    width: 100%;
     min-width: 0;
     min-height: 48px;
-    padding: 0.55rem 0.45rem;
-    font-size: 0.66rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.7rem;
+    text-align: left;
+  }
+
+  .level-select-btn .lvl-num {
+    display: inline-block;
+    margin-right: 0.5rem;
+    vertical-align: baseline;
   }
 
   .start-btn,
@@ -95,7 +118,11 @@
   }
 
   #game-screen {
+    height: 100%;
     max-height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
   }
 
   .hud-bar {
@@ -266,10 +293,11 @@
   }
 
   .chat-panel-hazard-strip {
-    top: 0;
+    left: 0;
     right: 0;
+    top: 0;
     bottom: auto;
-    width: auto;
+    width: 100%;
     height: 6px;
   }
 
@@ -419,10 +447,6 @@
 }
 
 @media (max-width: 380px) {
-  .level-grid {
-    grid-template-columns: 1fr;
-  }
-
   .action-bar {
     flex-wrap: wrap;
   }
