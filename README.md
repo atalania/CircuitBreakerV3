@@ -49,13 +49,17 @@ npm run preview
 
 ## Portal / Mobile Iframe Checklist
 
-- [x] Viewport meta: `width=device-width`, `initial-scale=1`, `viewport-fit=cover`
-- [x] Root layout: `html, body, .screen { height: 100%; width: 100% }` so the game fills the iframe slot instead of sizing itself from top-level `100vh`
-- [x] Touch: primary controls use mobile breakpoints with at least 44px tap targets where practical
-- [x] Safe area: mobile controls include `env(safe-area-inset-bottom)` padding where they sit near the bottom edge
+See **`MOBILE_EMBED_GAME_GUIDE.md`** for iframe behavior, `embedHeight`, and how this repo avoids `100vh`/`100dvh` in the embedded shell.
+
+- [x] Viewport meta: `width=device-width`, `initial-scale=1`, `viewport-fit=cover`, `maximum-scale=5`
+- [x] Root layout: `html, body`, and `.screen` use **percentage height** so the game fills the **iframe** slot (not the outer tab’s `100vh`)
+- [x] Resize / mobile chrome: `visualViewport` `resize` → `window` `resize` (`js/modules/embedViewport.js`) so overlays and tap-mode media queries refresh
+- [x] Touch: `touch-action: manipulation` on the shell; **`pan-y`** on the scrollable circuit stack; **`pan-x pan-y`** on `.circuit-viewport` for SVG panning; lab uses **Pointer Events** + **`setPointerCapture`** (not HTML5 drag on touch)
+- [x] Drag & drop: palette **tap-to-select, tap-canvas-to-place** when `(pointer: coarse)` or narrow width (`LabToolbar.js`)
+- [x] Safe area: mobile controls use `env(safe-area-inset-*)` where needed
 - [ ] Test: `/games/circuit-breaker` on a real phone in portrait and landscape
-- [ ] Test: "Open in new tab" from the portal toolbar at small widths
-- [x] `embedHeight` in `data/game.json` is set to the tested desktop minimum height
+- [ ] Test: “Open in new tab” from the portal toolbar at small widths
+- [x] `embedHeight` in `data/game.json` (`760px`) — re-validate after UI changes in the **portal** iframe
 
 ---
 
