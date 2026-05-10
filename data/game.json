@@ -9,7 +9,7 @@
     "Players practice Boolean reasoning, truth tables, and debugging circuits with optional hints from the in-game ordnance officer."
   ],
   "tags": ["digital logic", "boolean", "circuits", "education"],
-  "embedHeight": "100vh",
+  "embedHeight": "760px",
   "featured": true,
   "version": "0.1.0"
 }

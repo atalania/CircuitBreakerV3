@@ -6,7 +6,7 @@
   background: var(--bg-deep);
   position: relative;
   min-height: 0;
-  max-height: 100dvh;
+  max-height: 100%;
   overflow: hidden;
 }
 

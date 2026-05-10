@@ -6,16 +6,353 @@
 }
 
 @media (max-width: 700px) {
-  .game-main { flex-direction: column; }
+  html,
+  body {
+    width: 100%;
+    min-width: 0;
+    touch-action: manipulation;
+  }
+
+  .screen {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body::after {
+    opacity: 0.6;
+  }
+
+  #menu-screen {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: max(1.25rem, env(safe-area-inset-top)) 0.85rem max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .menu-bomb-silhouette {
+    width: min(92vw, 340px);
+    height: min(92vw, 340px);
+    top: 35%;
+  }
+
+  .menu-hazard-edge {
+    height: 10px;
+  }
+
+  .menu-container {
+    width: min(100%, 31rem);
+    padding: 1.25rem 1rem;
+  }
+
+  .menu-classification {
+    font-size: 0.5rem;
+    letter-spacing: 0.18em;
+  }
+
+  .menu-logo {
+    font-size: clamp(2rem, 13vw, 2.6rem);
+    letter-spacing: 0.06em;
+  }
+
+  .menu-subtitle {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    margin-bottom: 1.1rem;
+  }
+
+  .menu-divider {
+    margin-bottom: 1rem;
+  }
+
+  .menu-description {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    margin-bottom: 1.15rem;
+  }
+
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1.15rem;
+  }
+
+  .level-select-btn {
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.55rem 0.45rem;
+    font-size: 0.66rem;
+  }
+
+  .start-btn,
+  .menu-secondary-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .start-btn {
+    padding: 0.85rem 0.8rem;
+    font-size: 0.82rem;
+  }
+
+  #game-screen {
+    max-height: 100%;
+  }
+
+  .hud-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.45rem;
+    align-items: center;
+    min-height: 56px;
+    padding: 0.45rem max(0.55rem, env(safe-area-inset-right)) 0.5rem max(0.55rem, env(safe-area-inset-left));
+  }
+
+  .hud-left,
+  .hud-center,
+  .hud-right {
+    min-width: 0;
+  }
+
+  .hud-left {
+    gap: 0.45rem;
+  }
+
+  .hud-right {
+    gap: 0.35rem;
+  }
+
+  .level-number {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+  }
+
+  .level-title {
+    max-width: 34vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.74rem;
+  }
+
+  .timer-container {
+    gap: 0.05rem;
+  }
+
+  .timer-eyebrow,
+  .score-label {
+    display: none;
+  }
+
+  .timer-display {
+    font-size: 1.05rem;
+    letter-spacing: 0.07em;
+  }
+
+  .timer-bar-track {
+    width: min(26vw, 110px);
+    height: 6px;
+  }
+
+  .score-display {
+    font-size: 0.7rem;
+  }
+
+  .hud-btn {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.72rem;
+  }
+
+  .game-main {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .circuit-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0.45rem;
+  }
+
+  .objective-bar {
+    gap: 0.45rem;
+    margin-bottom: 0.45rem;
+    padding: 0.45rem 0.55rem;
+    border-left-width: 3px;
+  }
+
+  .objective-icon {
+    display: none;
+  }
+
+  .objective-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+  }
+
+  #objective-text {
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .circuit-viewport {
+    min-height: 0;
+    border-width: 1px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #circuit-container {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-width: min(540px, 150vw);
+    min-height: 100%;
+    padding: 0.35rem;
+  }
+
+  .circuit-svg {
+    width: auto;
+    min-width: min(520px, 145vw);
+    height: auto;
+    min-height: 260px;
+    max-width: none;
+  }
+
+  .truth-table-tracker,
+  .sequence-tracker {
+    max-width: calc(100% - 1rem);
+    padding: 0.45rem;
+    font-size: 0.62rem;
+  }
+
+  .truth-table-tracker {
+    right: 0.5rem;
+    bottom: 0.5rem;
+  }
+
+  .sequence-tracker {
+    left: 0.5rem;
+    bottom: 0.5rem;
+  }
+
+  .seq-val {
+    width: 24px;
+    height: 24px;
+  }
+
+  .action-bar {
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    padding-bottom: max(0rem, env(safe-area-inset-bottom));
+  }
+
+  .action-btn {
+    min-height: 46px;
+    padding: 0.55rem 0.35rem;
+    font-size: 0.64rem;
+    letter-spacing: 0.07em;
+  }
+
   .chat-panel {
     width: 100%;
-    flex: 0 0 min(200px, 32vh);
-    max-height: min(200px, 32vh);
+    flex: 0 0 clamp(118px, 25%, 180px);
+    max-height: clamp(118px, 25%, 180px);
     height: auto;
     border-left: none;
     border-top: 1px solid var(--border-dim);
+    box-shadow: inset 0 8px 24px rgba(0, 0, 0, 0.35);
   }
-  .timer-bar-track { width: 120px; }
+
+  .chat-panel-hazard-strip {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    width: auto;
+    height: 6px;
+  }
+
+  .chat-header {
+    min-height: 34px;
+    margin-left: 0;
+    padding: 0.45rem 0.65rem;
+  }
+
+  .chat-header-icon,
+  .chat-header-status {
+    display: none;
+  }
+
+  .chat-header-title {
+    font-size: 0.65rem;
+  }
+
+  .chat-concept-ref {
+    display: none !important;
+  }
+
+  #chat-messages {
+    padding: 0.55rem 0.65rem;
+    gap: 0.45rem;
+  }
+
+  .chat-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+
+  .chat-sender {
+    font-size: 0.58rem;
+  }
+
+  .chat-text {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .chat-input-area {
+    gap: 0.35rem;
+    margin-left: 0;
+    padding: 0.45rem 0.55rem max(0.45rem, env(safe-area-inset-bottom));
+  }
+
+  #chat-input {
+    min-width: 0;
+    min-height: 40px;
+    font-size: 0.82rem;
+    padding: 0.45rem 0.55rem;
+  }
+
+  #chat-send-btn {
+    min-height: 40px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.66rem;
+  }
+
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .modal-box {
+    width: 100%;
+    min-width: 0;
+    max-width: 28rem;
+    max-height: calc(100% - 2rem);
+    overflow-y: auto;
+    padding: 1.1rem;
+    border-width: 6px;
+  }
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+
+  .modal-btn {
+    min-height: 44px;
+    margin: 0.25rem;
+    padding: 0.65rem 1rem;
+  }
 }
 
 /* Short laptop / zoomed windows: reserve space for DISARM row */
@@ -34,6 +371,73 @@
   }
   .action-bar { margin-top: 0.45rem; gap: 0.45rem; }
   .action-btn { padding: 0.55rem 0.55rem; font-size: 0.68rem; }
+}
+
+@media (max-width: 520px) {
+  .hud-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "level controls"
+      "timer timer";
+    row-gap: 0.25rem;
+  }
+
+  .hud-left { grid-area: level; }
+  .hud-center { grid-area: timer; align-items: stretch; }
+  .hud-right { grid-area: controls; }
+
+  .timer-container {
+    align-items: stretch;
+  }
+
+  .timer-display {
+    display: none;
+  }
+
+  .timer-bar-track {
+    width: 100%;
+  }
+
+  .hud-score-block {
+    display: none;
+  }
+
+  .level-title {
+    max-width: 58vw;
+  }
+
+  .action-btn {
+    font-size: 0.58rem;
+  }
+
+  #hint-btn,
+  #reset-seq-btn {
+    flex: 0.7;
+  }
+}
+
+@media (max-width: 380px) {
+  .level-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-bar {
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    flex-basis: calc(50% - 0.25rem);
+  }
+
+  #submit-btn {
+    flex-basis: 100%;
+    order: -1;
+  }
+
+  .chat-panel {
+    flex-basis: clamp(104px, 22%, 150px);
+    max-height: clamp(104px, 22%, 150px);
+  }
 }
 
 /* ---- Switch / pin hover ---- */

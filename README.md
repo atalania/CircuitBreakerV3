@@ -47,6 +47,18 @@ npm run preview
 
 ---
 
+## Portal / Mobile Iframe Checklist
+
+- [x] Viewport meta: `width=device-width`, `initial-scale=1`, `viewport-fit=cover`
+- [x] Root layout: `html, body, .screen { height: 100%; width: 100% }` so the game fills the iframe slot instead of sizing itself from top-level `100vh`
+- [x] Touch: primary controls use mobile breakpoints with at least 44px tap targets where practical
+- [x] Safe area: mobile controls include `env(safe-area-inset-bottom)` padding where they sit near the bottom edge
+- [ ] Test: `/games/circuit-breaker` on a real phone in portrait and landscape
+- [ ] Test: "Open in new tab" from the portal toolbar at small widths
+- [x] `embedHeight` in `data/game.json` is set to the tested desktop minimum height
+
+---
+
 ## Gameplay Overview
 
 - **Menu**
