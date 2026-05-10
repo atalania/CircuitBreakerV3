@@ -2,26 +2,99 @@
 .truth-table-tracker {
   display: none;
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  top: 10px;
+  left: 10px;
+  right: auto;
+  bottom: auto;
+  max-width: calc(100% - 1.25rem);
   background: rgba(13, 16, 24, 0.95);
   border: 1px solid var(--border-bright);
   border-radius: 8px;
-  padding: 0.6rem;
+  padding: 0.5rem 0.55rem 0.55rem;
   font-family: 'Share Tech Mono', monospace;
   font-size: 0.72rem;
-  z-index: 10;
+  z-index: 12;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .truth-table-tracker.visible { display: block; }
 
-.tt-title {
+.truth-table-tracker.tt-dragging {
+  cursor: grabbing;
+}
+
+.truth-table-tracker--minimized {
+  padding: 0.35rem 0.45rem;
+}
+
+.truth-table-tracker--minimized .tt-panel-body {
+  display: none;
+}
+
+.tt-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  user-select: none;
+}
+
+.truth-table-tracker--minimized .tt-panel-header {
+  margin-bottom: 0;
+}
+
+.tt-drag-handle {
+  flex-shrink: 0;
+  cursor: inherit;
+  padding: 0.12rem 0.22rem;
+  line-height: 1;
   color: var(--accent-blue);
-  font-size: 0.65rem;
-  letter-spacing: 2px;
+  font-size: 0.95rem;
+  opacity: 0.88;
+  border-radius: 4px;
+}
+
+.tt-drag-handle:hover {
+  opacity: 1;
+  background: rgba(0, 180, 255, 0.1);
+}
+
+.tt-min-btn {
+  flex-shrink: 0;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-bright);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tt-min-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tt-title {
+  flex: 1;
+  min-width: 0;
+  color: var(--accent-blue);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tt-row {

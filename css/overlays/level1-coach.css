@@ -15,9 +15,16 @@
   z-index: 10;
   line-height: 1.4;
   box-shadow: 0 4px 20px rgba(0, 255, 136, 0.08);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .level1-coach.visible { display: block; }
+
+.level1-coach.l1-dragging {
+  cursor: grabbing;
+}
 
 .l1-header {
   display: flex;
@@ -29,8 +36,7 @@
 
 .l1-drag-handle {
   flex-shrink: 0;
-  cursor: grab;
-  touch-action: none;
+  cursor: inherit;
   padding: 0.15rem 0.25rem;
   line-height: 1;
   color: var(--accent-green);
@@ -42,10 +48,6 @@
 .l1-drag-handle:hover {
   opacity: 1;
   background: rgba(0, 255, 136, 0.08);
-}
-
-.l1-drag-handle.l1-dragging {
-  cursor: grabbing;
 }
 
 .l1-title {

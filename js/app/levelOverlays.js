@@ -1,6 +1,15 @@
 import { getLevel1CoachState } from "../levels/level1.js";
 import { getLevel1GuidedCoachState } from "../levels/level1Guided.js";
 
+/**
+ * Do not start a panel drag from embedded controls (minimize, links, etc.).
+ * @param {EventTarget | null} target
+ */
+function dragSurfaceExemptInteractive(target) {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest("button, a, input, textarea, select, [role='button']");
+}
+
 export function teardownLevelOverlayNodes() {
   document
     .querySelectorAll(".truth-table-tracker, .sequence-tracker, .sr-latch-tracker, .level1-coach")
@@ -18,10 +27,10 @@ export function createLevel1Coach(circuitLab) {
   coach.id = "level1-coach";
   coach.innerHTML = `
       <div class="l1-header">
-        <span class="l1-drag-handle" aria-label="Drag to move checklist" title="Drag to move">⠿</span>
+        <span class="l1-drag-handle" aria-hidden="true">⠿</span>
         <div class="l1-title">BOOT CAMP — STEP LIST</div>
       </div>
-      <div class="l1-hint">Drag the handle to move this panel. Follow steps top to bottom.</div>
+      <div class="l1-hint">Drag anywhere on this panel to move it. Follow steps top to bottom.</div>
       <div class="l1-step" data-l1-step="pins"><span class="l1-mark">○</span><span class="l1-text">Pins A, B, C on the left</span></div>
       <div class="l1-step" data-l1-step="leds"><span class="l1-mark">○</span><span class="l1-text">LEDs X, Y, Z on the right</span></div>
       <div class="l1-step" data-l1-step="gates"><span class="l1-mark">○</span><span class="l1-text">One AND, one OR, one NOT on the canvas</span></div>
@@ -45,10 +54,10 @@ export function createLevel1GuidedCoach(circuitLab) {
   coach.id = "level1-coach";
   coach.innerHTML = `
       <div class="l1-header">
-        <span class="l1-drag-handle" aria-label="Drag to move checklist" title="Drag to move">⠿</span>
+        <span class="l1-drag-handle" aria-hidden="true">⠿</span>
         <div class="l1-title">TRAINING — BUILD & WIRE</div>
       </div>
-      <div class="l1-hint">Drag parts from the bar onto the canvas, then connect <strong>cyan → orange</strong>.</div>
+      <div class="l1-hint">Drag parts from the bar onto the canvas, then connect <strong>cyan → orange</strong>. Drag anywhere on this panel to move it.</div>
       <div class="l1-demo-block" aria-hidden="true">
         <div class="l1-demo-caption">Place (toolbar → canvas)</div>
         <div class="l1-place-demo">
@@ -145,9 +154,6 @@ function positionLevel1CoachDefault(coach, viewport) {
  * @param {HTMLElement} viewport
  */
 function initLevel1CoachDrag(coach, viewport) {
-  const handle = coach.querySelector(".l1-drag-handle");
-  if (!handle) return;
-
   /** @type {{ startX: number, startY: number, origL: number, origT: number, pointerId: number } | null} */
   let drag = null;
 
@@ -182,23 +188,24 @@ function initLevel1CoachDrag(coach, viewport) {
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("pointercancel", onUp);
     try {
-      handle.releasePointerCapture(pid);
+      coach.releasePointerCapture(pid);
     } catch {
       /* ignore */
     }
-    handle.classList.remove("l1-dragging");
+    coach.classList.remove("l1-dragging");
   };
 
-  handle.addEventListener("pointerdown", (e) => {
+  coach.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
+    if (dragSurfaceExemptInteractive(e.target)) return;
     e.preventDefault();
     coach.style.right = "auto";
     const origL = coach.offsetLeft;
     const origT = coach.offsetTop;
     drag = { startX: e.clientX, startY: e.clientY, origL, origT, pointerId: e.pointerId };
-    handle.classList.add("l1-dragging");
+    coach.classList.add("l1-dragging");
     try {
-      handle.setPointerCapture(e.pointerId);
+      coach.setPointerCapture(e.pointerId);
     } catch {
       /* ignore */
     }
@@ -263,6 +270,144 @@ function level1ExpectedXyz(a, b, c) {
 }
 
 /**
+ * @param {string} titleText
+ * @param {string} bodyInnerHtml
+ */
+function buildTruthTablePanelHtml(titleText, bodyInnerHtml) {
+  return `
+    <div class="tt-panel-header">
+      <span class="tt-drag-handle" aria-hidden="true">⠿</span>
+      <div class="tt-title">${titleText}</div>
+      <button type="button" class="tt-min-btn" aria-expanded="true" aria-label="Collapse truth table" title="Collapse">−</button>
+    </div>
+    <div class="tt-panel-body">
+      ${bodyInnerHtml}
+    </div>`;
+}
+
+/**
+ * @param {HTMLElement} tracker
+ * @param {HTMLElement} viewport
+ */
+function truthTableClampToViewport(tracker, viewport) {
+  const pad = 4;
+  const maxL = viewport.clientWidth - tracker.offsetWidth - pad;
+  const maxT = viewport.clientHeight - tracker.offsetHeight - pad;
+  let l = parseFloat(tracker.style.left);
+  let t = parseFloat(tracker.style.top);
+  if (!Number.isFinite(l)) l = tracker.offsetLeft;
+  if (!Number.isFinite(t)) t = tracker.offsetTop;
+  l = Math.max(pad, Math.min(maxL, l));
+  t = Math.max(pad, Math.min(maxT, t));
+  tracker.style.left = `${l}px`;
+  tracker.style.top = `${t}px`;
+  tracker.style.right = "auto";
+  tracker.style.bottom = "auto";
+}
+
+/**
+ * @param {HTMLElement} tracker
+ * @param {HTMLElement} viewport
+ */
+function positionTruthTableDefault(tracker, viewport) {
+  requestAnimationFrame(() => {
+    const pad = 10;
+    tracker.style.right = "auto";
+    tracker.style.bottom = "auto";
+    tracker.style.left = `${pad}px`;
+    tracker.style.top = `${pad}px`;
+    truthTableClampToViewport(tracker, viewport);
+  });
+}
+
+/**
+ * @param {HTMLElement} tracker
+ * @param {HTMLElement} viewport
+ */
+function initTruthTableDrag(tracker, viewport) {
+  /** @type {{ startX: number, startY: number, origL: number, origT: number, pointerId: number } | null} */
+  let drag = null;
+
+  const onMove = (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    tracker.style.right = "auto";
+    tracker.style.bottom = "auto";
+    tracker.style.left = `${drag.origL + dx}px`;
+    tracker.style.top = `${drag.origT + dy}px`;
+    truthTableClampToViewport(tracker, viewport);
+  };
+
+  const onUp = () => {
+    if (!drag) return;
+    const pid = drag.pointerId;
+    drag = null;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
+    try {
+      tracker.releasePointerCapture(pid);
+    } catch {
+      /* ignore */
+    }
+    tracker.classList.remove("tt-dragging");
+  };
+
+  tracker.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    if (dragSurfaceExemptInteractive(e.target)) return;
+    e.preventDefault();
+    tracker.style.right = "auto";
+    tracker.style.bottom = "auto";
+    const origL = tracker.offsetLeft;
+    const origT = tracker.offsetTop;
+    drag = { startX: e.clientX, startY: e.clientY, origL, origT, pointerId: e.pointerId };
+    tracker.classList.add("tt-dragging");
+    try {
+      tracker.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  });
+}
+
+/**
+ * @param {HTMLElement} viewport
+ */
+function wireTruthTableTrackerPanel(viewport) {
+  const tracker = document.getElementById("tt-tracker");
+  if (!tracker) return;
+
+  positionTruthTableDefault(tracker, viewport);
+  initTruthTableDrag(tracker, viewport);
+
+  const minBtn = tracker.querySelector(".tt-min-btn");
+  if (minBtn) {
+    minBtn.addEventListener("click", () => {
+      const minimized = tracker.classList.toggle("truth-table-tracker--minimized");
+      minBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
+      minBtn.setAttribute("aria-label", minimized ? "Expand truth table" : "Collapse truth table");
+      minBtn.title = minimized ? "Expand" : "Collapse";
+      minBtn.textContent = minimized ? "+" : "−";
+      requestAnimationFrame(() => truthTableClampToViewport(tracker, viewport));
+    });
+  }
+
+  const onResize = () => {
+    if (!tracker.isConnected) {
+      window.removeEventListener("resize", onResize);
+      return;
+    }
+    truthTableClampToViewport(tracker, viewport);
+  };
+  window.addEventListener("resize", onResize);
+}
+
+/**
  * Full reference table for Gate Basics (three outputs); live digits update with pins + wiring.
  * @param {HTMLElement} viewport
  */
@@ -288,14 +433,14 @@ function mountLevel1FullTruthTable(viewport) {
     })
     .join("");
 
-  tracker.innerHTML = `
-      <div class="tt-title">TARGET TRUTH TABLE</div>
+  const body = `
       <div class="tt-head tt-head--l1">
         <span>ABC</span><span class="tt-hdr-mid">need X·Y·Z</span><span class="tt-hdr-live">yours</span>
       </div>
       ${rows}
       <div class="tt-footnote">DISARM checks every row at once.</div>
     `;
+  tracker.innerHTML = buildTruthTablePanelHtml("TARGET TRUTH TABLE", body);
   viewport.appendChild(tracker);
 }
 
@@ -324,14 +469,14 @@ function mountLevel1GuidedTruthTable(viewport) {
     })
     .join("");
 
-  tracker.innerHTML = `
-      <div class="tt-title">AND TRUTH TABLE</div>
+  const body = `
       <div class="tt-head tt-head--l1g">
         <span>AB</span><span class="tt-hdr-mid">need X</span><span class="tt-hdr-live">yours</span>
       </div>
       ${rows}
       <div class="tt-footnote">Tap pins A,B — middle column is the spec.</div>
     `;
+  tracker.innerHTML = buildTruthTablePanelHtml("AND TRUTH TABLE", body);
   viewport.appendChild(tracker);
 }
 
@@ -367,8 +512,7 @@ function mountSingleOutputTruthTable(viewport, level) {
     })
     .join("");
 
-  tracker.innerHTML = `
-      <div class="tt-title">TRUTH TABLE</div>
+  const body = `
       <div class="tt-head tt-head--single">
         <span>A</span><span>B</span><span>C</span>
         <span class="tt-hdr-spec">${outputLabel}<span class="tt-sub">spec</span></span>
@@ -378,6 +522,7 @@ function mountSingleOutputTruthTable(viewport, level) {
       ${rows}
       <div class="tt-progress" id="tt-progress">0 / ${totalWinning} rows</div>
     `;
+  tracker.innerHTML = buildTruthTablePanelHtml("TRUTH TABLE", body);
 
   viewport.appendChild(tracker);
 }
@@ -391,14 +536,17 @@ export function createTruthTableTracker(level) {
 
   if (level.id === 1 && level.isGuidedIntro) {
     mountLevel1GuidedTruthTable(viewport);
+    wireTruthTableTrackerPanel(viewport);
     return;
   }
   if (level.id === 1) {
     mountLevel1FullTruthTable(viewport);
+    wireTruthTableTrackerPanel(viewport);
     return;
   }
   if (level.id === 2 || level.id === 5) {
     mountSingleOutputTruthTable(viewport, level);
+    wireTruthTableTrackerPanel(viewport);
   }
 }
 
