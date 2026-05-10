@@ -17,6 +17,23 @@ function wire(lab, fromB, fromPort, toB, toPort) {
   lab.connectPorts(`${fromB.id}:${fromPort}`, `${toB.id}:${toPort}`);
 }
 
+describe("CircuitLab.snapshotForAssistant", () => {
+  it("summarizes blocks, wires, and input pins", () => {
+    const lab = new CircuitLab();
+    lab.placeAt("high", 10, 10);
+    const a = lab.blocks[lab.blocks.length - 1];
+    a.pin = "A";
+    lab.placeAt("and", 100, 10);
+    lab.placeAt("led:X", 200, 10);
+    const snap = lab.snapshotForAssistant();
+    expect(snap.wireCount).toBe(0);
+    expect(snap.ledLabels).toContain("X");
+    expect(snap.inputPinsOnCanvas).toEqual([{ letter: "A", value: 1 }]);
+    expect(snap.blockCounts.source).toBe(1);
+    expect(snap.blockCounts.and).toBe(1);
+  });
+});
+
 describe("CircuitLab.evaluate", () => {
   it("returns empty outputs for an empty lab", () => {
     const lab = new CircuitLab();

@@ -2,8 +2,8 @@
 //  PORTAL ASSISTANT — thin adapter over stem-assistant-bridge
 //  Mirrors the wiki “Web Assistant Bridge – Game Integration Guide”:
 //  initStemAssistantBridge at startup + stemAssistant.* from gameplay hooks.
-//  Standalone dev uses vite/vitest resolve.alias → js/vendor/stem-assistant-bridge.js;
-//  portal build uses npm "stem-assistant-bridge": "file:../../packages/stem-assistant-bridge".
+//  Dependency: file:vendor/stem-assistant-bridge (installable shim). Portal monorepos may
+//  replace with file:../../packages/stem-assistant-bridge before npm ci for the shared package.
 // ============================================================
 
 import gameData from "../../data/game.json";
@@ -43,14 +43,15 @@ export function getAssistantGameId() {
 }
 
 /**
- * Initialize shared bridge once at startup.
+ * Initialize shared bridge once at startup (only when embedded / assistant forwarding is on).
  */
 export function initPortalAssistantBridge() {
+  if (bridgeInitialized) return;
+  if (!isPortalAssistantActive()) return;
   initStemAssistantBridge({
     gameId: getAssistantGameId(),
     defaultLevelId: "menu",
     defaultTargetConcept: "digital_logic",
-    targetOrigin: "*",
   });
   bridgeInitialized = true;
 }

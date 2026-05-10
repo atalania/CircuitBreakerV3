@@ -1,15 +1,6 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 export default defineConfig({
-  resolve: {
-    alias: {
-      "stem-assistant-bridge": path.resolve(__dirname, "js/vendor/stem-assistant-bridge.js"),
-    },
-  },
   test: {
     environment: "node",
     include: ["js/**/*.test.js"],
@@ -35,6 +26,7 @@ export default defineConfig({
         "js/app/endlessSubmit.js",
         "js/app/jkPulse.js",
         "js/app/portalGameContext.js",
+        "js/app/portalAssistantSnapshot.js",
         "js/app/lab/isValidLabPlaceKind.js",
         "js/app/lab/labBlockIdFromElement.js",
         "js/app/lab/svgClientToSvg.js",

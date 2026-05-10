@@ -46,15 +46,30 @@ export function createLevel1GuidedCoach(circuitLab) {
   coach.innerHTML = `
       <div class="l1-header">
         <span class="l1-drag-handle" aria-label="Drag to move checklist" title="Drag to move">⠿</span>
-        <div class="l1-title">TRAINING — WIRE CHECKLIST</div>
+        <div class="l1-title">TRAINING — BUILD & WIRE</div>
       </div>
-      <div class="l1-hint">We placed the parts; you connect them. Drag **cyan → orange**.</div>
-      <div class="l1-step l1-step-static l1-step-done" data-l1-step="preset">
-        <span class="l1-mark">✓</span><span class="l1-text">Pins **A**, **B**, **AND**, and LED **X** are on the canvas</span>
+      <div class="l1-hint">Drag parts from the bar onto the canvas, then connect <strong>cyan → orange</strong>.</div>
+      <div class="l1-demo-block" aria-hidden="true">
+        <div class="l1-demo-caption">Place (toolbar → canvas)</div>
+        <div class="l1-place-demo">
+          <div class="l1-place-demo-bar"></div>
+          <div class="l1-place-demo-chip">A</div>
+          <div class="l1-place-demo-surface"></div>
+        </div>
+        <div class="l1-demo-caption">Wire (output → input)</div>
+        <div class="l1-wire-demo">
+          <span class="l1-demo-port l1-demo-cyan" title="output"></span>
+          <span class="l1-wire-demo-track"><span class="l1-wire-demo-glow"></span></span>
+          <span class="l1-demo-port l1-demo-orange" title="input"></span>
+        </div>
       </div>
-      <div class="l1-step" data-l1-step="andins"><span class="l1-mark">○</span><span class="l1-text">Wire **both** **A** and **B** into the AND gate (two orange inputs)</span></div>
-      <div class="l1-step" data-l1-step="xout"><span class="l1-mark">○</span><span class="l1-text">Wire AND’s **cyan output** into LED **X**</span></div>
-      <div class="l1-step l1-step-static" data-l1-step="disarm"><span class="l1-mark">◇</span><span class="l1-text">**DISARM** checks all four A,B combinations — no rush, no fuse here</span></div>
+      <div class="l1-step" data-l1-step="pinA"><span class="l1-mark">○</span><span class="l1-text">Drag <strong>pin A</strong> from <strong>INPUTS</strong> onto the canvas</span></div>
+      <div class="l1-step" data-l1-step="pinB"><span class="l1-mark">○</span><span class="l1-text">Drag <strong>pin B</strong> from <strong>INPUTS</strong> onto the canvas</span></div>
+      <div class="l1-step" data-l1-step="andGate"><span class="l1-mark">○</span><span class="l1-text">Drag <strong>AND</strong> from <strong>GATES</strong> onto the canvas</span></div>
+      <div class="l1-step" data-l1-step="ledX"><span class="l1-mark">○</span><span class="l1-text">Drag <strong>LED X</strong> from <strong>OUTPUT LEDs</strong></span></div>
+      <div class="l1-step" data-l1-step="andins"><span class="l1-mark">○</span><span class="l1-text">Wire <strong>A</strong> and <strong>B</strong> into the <strong>AND</strong> (orange inputs)</span></div>
+      <div class="l1-step" data-l1-step="xout"><span class="l1-mark">○</span><span class="l1-text">Wire <strong>AND</strong> <strong>cyan out</strong> → <strong>X</strong> orange in</span></div>
+      <div class="l1-step l1-step-static" data-l1-step="disarm"><span class="l1-mark">◇</span><span class="l1-text"><strong>DISARM</strong> checks all four A,B combos — no fuse on this run</span></div>
     `;
   viewport.appendChild(coach);
   positionLevel1CoachDefault(coach, viewport);
@@ -84,16 +99,29 @@ function refreshLevel1GuidedCoach(coach, getState) {
     const m = row.querySelector(".l1-mark");
     if (m) m.textContent = done ? "✓" : "○";
   };
+  mark("pinA", s.hasPinA);
+  mark("pinB", s.hasPinB);
+  mark("andGate", s.andOk);
+  mark("ledX", s.hasLedX);
   mark("andins", s.bothAndInputs);
   mark("xout", s.xFed);
 
-  const order = ["andins", "xout"];
+  const order = ["pinA", "pinB", "andGate", "ledX", "andins", "xout"];
+  const doneFor = (id) => {
+    if (id === "pinA") return s.hasPinA;
+    if (id === "pinB") return s.hasPinB;
+    if (id === "andGate") return s.andOk;
+    if (id === "ledX") return s.hasLedX;
+    if (id === "andins") return s.bothAndInputs;
+    if (id === "xout") return s.xFed;
+    return false;
+  };
   let firstOpen = true;
   for (const id of order) {
     const row = coach.querySelector(`[data-l1-step="${id}"]`);
     if (!row) continue;
     row.classList.remove("l1-step-current");
-    const done = id === "andins" ? s.bothAndInputs : s.xFed;
+    const done = doneFor(id);
     if (!done && firstOpen) {
       row.classList.add("l1-step-current");
       firstOpen = false;
@@ -186,7 +214,7 @@ function initLevel1CoachDrag(coach, viewport) {
  */
 export function refreshLevel1CoachFromDom(circuitLab, getCoachState = getLevel1CoachState) {
   const coach = document.getElementById("level1-coach");
-  if (!coach) return;
+  if (!coach || coach.classList.contains("level1-coach--guided")) return;
   refreshLevel1Coach(coach, () => getCoachState(circuitLab));
 }
 

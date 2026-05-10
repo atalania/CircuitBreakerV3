@@ -55,15 +55,29 @@ describe("portalAssistant", () => {
       hintCount: 1,
     });
 
-    // initStemAssistantBridge posts STEM_ASSISTANT_BRIDGE_INIT; then our event sends ASSISTANT_GAME_EVENT
-    expect(postMessage).toHaveBeenCalledTimes(2);
-    const [msg, target] = postMessage.mock.calls[1];
+    // init: STEM_ASSISTANT_BRIDGE_INIT + automatic level_start (embedded); then gameplay event
+    expect(postMessage).toHaveBeenCalledTimes(3);
+    expect(postMessage.mock.calls[0][0].type).toBe("STEM_ASSISTANT_BRIDGE_INIT");
+    const autoLevel = postMessage.mock.calls[1][0];
+    expect(autoLevel.type).toBe("ASSISTANT_GAME_EVENT");
+    expect(autoLevel.payload.eventType).toBe("level_start");
+    expect(autoLevel.payload.levelId).toBe("menu");
+    const [msg, target] = postMessage.mock.calls[2];
     expect(msg.type).toBe("ASSISTANT_GAME_EVENT");
     expect(target).toBe("*");
     expect(msg.payload.eventType).toBe("level_start");
     expect(msg.payload.levelId).toBe("stage-2");
     expect(msg.payload.hintCount).toBe(1);
     expect(typeof msg.payload.gameId).toBe("string");
+  });
+
+  it("initPortalAssistantBridge no-ops when inactive (no postMessage)", async () => {
+    const postMessage = vi.fn();
+    vi.stubGlobal("window", { self: {}, top: {}, parent: { postMessage } });
+    vi.stubEnv("VITE_PORTAL_ASSISTANT", "0");
+    const { initPortalAssistantBridge } = await loadPortalAssistant();
+    initPortalAssistantBridge();
+    expect(postMessage).not.toHaveBeenCalled();
   });
 
   it("sendAssistantGameEvent no-ops when inactive or payload invalid", async () => {

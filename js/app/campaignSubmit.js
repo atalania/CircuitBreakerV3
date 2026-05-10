@@ -18,6 +18,9 @@ export function processCampaignLabSubmit(app, res) {
         app._portalAssistantEvent("incorrect_submission", {
           playerAnswer: res.message || "S=1 R=1",
           mistakeCategory: "invalid_sr_inputs",
+          additionalContext: {
+            srLatchNote: "SR latch cannot hold when S and R are both driven high; player must avoid illegal S=R=1.",
+          },
         });
       }
       return;
@@ -44,6 +47,12 @@ export function processCampaignLabSubmit(app, res) {
         playerAnswer: `${outLabel}=${outputKey} @ ABC=${combo}`,
         correctAnswer: `${outLabel}=${expectedOut} @ ABC=${combo}`,
         mistakeCategory: "circuit_output_mismatch",
+        additionalContext: {
+          truthTableRowAbc: combo,
+          expectedOutputOnRow: expectedOut,
+          observedOutputOnRow: outputKey,
+          truthTableProgress: prog ?? null,
+        },
       });
     } else if (res.partial) {
       app.audio.playSwitch();
@@ -73,6 +82,11 @@ export function processCampaignLabSubmit(app, res) {
         playerAnswer: `${outLabel}=${outputKey} @ ABC=${combo}`,
         correctAnswer: `Need ${outLabel}=1 on a winning row`,
         mistakeCategory: "not_winning_row",
+        additionalContext: {
+          truthTableRowAbc: combo,
+          observedOutputOnRow: outputKey,
+          truthTableProgress: prog ?? null,
+        },
       });
     }
     return;

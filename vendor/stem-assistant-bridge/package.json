@@ -1,0 +1,12 @@
+{
+  "name": "stem-assistant-bridge",
+  "version": "0.0.0-circuit-shim",
+  "private": true,
+  "type": "module",
+  "description": "Embedded shim mirroring the portal stem-assistant-bridge API. Replace with file:../../packages/stem-assistant-bridge when building inside the portal monorepo.",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "circuitGameShim": true
+}

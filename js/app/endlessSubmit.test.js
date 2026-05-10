@@ -93,7 +93,7 @@ describe("submitEndlessRound with wired F", () => {
     expect(app.audio.playSuccess).toHaveBeenCalled();
     expect(app._portalAssistantEvent).toHaveBeenCalledWith(
       "correct_submission",
-      expect.objectContaining({ playerAnswer: "endless_truth_table_match" })
+      expect.objectContaining({ playerAnswer: "endless_truth_table_match_all_8_rows" })
     );
     expect(app._portalAssistantEvent).toHaveBeenCalledWith("level_complete");
   });

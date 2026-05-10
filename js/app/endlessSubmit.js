@@ -40,6 +40,11 @@ export function submitEndlessRound(app) {
             playerAnswer: `F=${got} @ ABC=${key}`,
             correctAnswer: `F=${want} @ ABC=${key}`,
             mistakeCategory: "truth_table_mismatch",
+            additionalContext: {
+              truthTableRowAbc: key,
+              expectedF: want,
+              observedF: got,
+            },
           });
           return;
         }
@@ -51,8 +56,11 @@ export function submitEndlessRound(app) {
   app.ui.flashCircuit();
   app.ui.addChatMessage("Truth table matches the AI brief — excellent work.", "system");
   app._portalAssistantEvent("correct_submission", {
-    playerAnswer: "endless_truth_table_match",
-    additionalContext: { title: app.endlessSpec?.title },
+    playerAnswer: "endless_truth_table_match_all_8_rows",
+    additionalContext: {
+      endlessRoundTitle: app.endlessSpec?.title,
+      briefObjective: app.endlessSpec?.objective,
+    },
   });
   app._portalAssistantEvent("level_complete");
   setTimeout(() => showEndlessRoundComplete(app), 700);

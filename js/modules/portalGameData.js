@@ -89,6 +89,115 @@ export function updateHighScore(currentData, runScore, scoreMeta = {}) {
   return next;
 }
 
+/** Hub + game agree on this shape for per-level campaign and endless separation. */
+export const SCORES_VERSION = 2;
+
+/**
+ * Merge root `campaignBests` with `circuitBreaker.campaignBests` (root wins on key clash).
+ * @param {Record<string, unknown>} data
+ */
+function mergeCampaignBestsMaps(data) {
+  const nested = normalizePortalGameData(data.circuitBreaker?.campaignBests);
+  const root = normalizePortalGameData(data.campaignBests);
+  return { ...nested, ...root };
+}
+
+/**
+ * @param {Record<string, unknown>} data
+ * @param {string} key
+ */
+function _prevCampaignSpeedBest(data, key) {
+  const merged = normalizePortalGameData(mergeCampaignBestsMaps(data)[key]);
+  return Math.max(
+    Number(merged.speedScore ?? merged.highScore ?? merged.score ?? 0),
+    0
+  );
+}
+
+/**
+ * Per-level campaign best (higher speedScore = better). Mirrors under `circuitBreaker` for hub path lists.
+ * @param {unknown} currentData
+ * @param {number | string} levelId
+ * @param {{ speedScore: number, elapsedMs: number, diffusalScore?: number, hintsUsed?: number, scoreMeta?: Record<string, unknown> }} payload
+ */
+export function updateCampaignLevelBest(currentData, levelId, payload) {
+  const data = normalizePortalGameData(currentData);
+  const key = String(levelId);
+  const speedScore = Number(payload.speedScore);
+  if (!Number.isFinite(speedScore)) return data;
+
+  const prevSpeed = _prevCampaignSpeedBest(data, key);
+  if (speedScore <= prevSpeed) return data;
+
+  const entry = {
+    speedScore,
+    elapsedMs: Math.max(0, Math.floor(Number(payload.elapsedMs) || 0)),
+    diffusalScore: Math.max(0, Math.floor(Number(payload.diffusalScore) || 0)),
+    ...(payload.hintsUsed != null ? { hintsUsed: Math.max(0, Math.floor(Number(payload.hintsUsed))) } : {}),
+    at: typeof payload.at === "string" ? payload.at : new Date().toISOString(),
+  };
+
+  const mergedBests = mergeCampaignBestsMaps(data);
+  const campaignBests = { ...mergedBests, [key]: entry };
+
+  const cbRoot = normalizePortalGameData(data.circuitBreaker);
+  const circuitBreaker = {
+    ...cbRoot,
+    campaignBests: { ...mergedBests, [key]: entry },
+  };
+
+  const next = {
+    ...data,
+    scoresVersion: SCORES_VERSION,
+    campaignBests,
+    circuitBreaker,
+    scoreMeta: normalizePortalGameData(payload.scoreMeta ?? {}),
+  };
+  savePortalGameData(next);
+  return next;
+}
+
+/**
+ * Endless cumulative best. Mirrors under `circuitBreaker.endlessBest` for hub path lists.
+ * Also bumps top-level `highScore` / `score` when this run beats prior endless (backward compat for single-number readers).
+ * @param {unknown} currentData
+ * @param {number} engineScore
+ * @param {Record<string, unknown>} [scoreMeta]
+ */
+export function updateEndlessBest(currentData, engineScore, scoreMeta = {}) {
+  const data = normalizePortalGameData(currentData);
+  const score = Number(engineScore);
+  if (!Number.isFinite(score)) return data;
+
+  const prevEndless = Math.max(
+    Number(data.endlessBest?.score ?? 0),
+    Number(data.circuitBreaker?.endlessBest?.score ?? 0)
+  );
+  if (score <= prevEndless) return data;
+
+  const endlessEntry = {
+    ...normalizePortalGameData(scoreMeta),
+    score,
+    at: new Date().toISOString(),
+  };
+
+  const cbRoot = normalizePortalGameData(data.circuitBreaker);
+  const next = {
+    ...data,
+    scoresVersion: SCORES_VERSION,
+    endlessBest: endlessEntry,
+    circuitBreaker: {
+      ...cbRoot,
+      endlessBest: endlessEntry,
+    },
+    highScore: Math.max(Number(data.highScore ?? 0), score),
+    score: Math.max(Number(data.score ?? 0), score),
+    scoreMeta: normalizePortalGameData(scoreMeta),
+  };
+  savePortalGameData(next);
+  return next;
+}
+
 /**
  * Convert solve time (lower is better) into leaderboard score (higher is better).
  * Keeps values positive and comparable across submissions.

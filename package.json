@@ -2,6 +2,9 @@
   "name": "circuit-game-ver2",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "stem-assistant-bridge": "file:vendor/stem-assistant-bridge"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -10,11 +10,16 @@ import { ensureInputPins, evaluateWithPins, ledIdForLabel } from "./labLevelUtil
 export function getLevel1GuidedCoachState(lab) {
   const pinA = lab.blocks.find((b) => b.kind === "source" && b.pin === "A");
   const pinB = lab.blocks.find((b) => b.kind === "source" && b.pin === "B");
-  const pinsOk = !!(pinA && pinB);
+  const hasPinA = !!pinA;
+  const hasPinB = !!pinB;
+  const pinsOk = hasPinA && hasPinB;
 
   const andGates = lab.blocks.filter((b) => b.kind === "and");
   const andGate = andGates.length >= 1 ? andGates[0] : null;
   const andOk = !!andGate;
+
+  const xLed = lab.findLedByLabel("X");
+  const hasLedX = !!xLed;
 
   const feedsIn0 =
     !!(
@@ -38,37 +43,66 @@ export function getLevel1GuidedCoachState(lab) {
     );
   const bothAndInputs = feedsIn0 && feedsIn1;
 
-  const xLed = lab.findLedByLabel("X");
   const xFed = !!(
     andGate &&
     xLed &&
     lab.wires.some((w) => w.fromKey === `${andGate.id}:out` && w.toKey === `${xLed.id}:in`)
   );
 
-  return { pinsOk, andOk, bothAndInputs, xFed };
+  return {
+    pinA,
+    pinB,
+    hasPinA,
+    hasPinB,
+    pinsOk,
+    andGate,
+    andOk,
+    hasLedX,
+    feedsIn0,
+    feedsIn1,
+    bothAndInputs,
+    xFed,
+  };
+}
+
+/**
+ * Monotonic tutorial stage 0–7 for guided intro (pins in any order, then AND, LED X, then wires).
+ * Used for sequential system messages only.
+ * @param {import('../modules/circuitLab.js').CircuitLab} lab
+ */
+export function getGuidedCoachMilestone(lab) {
+  const s = getLevel1GuidedCoachState(lab);
+  let m = 0;
+  if (s.hasPinA || s.hasPinB) m = 1;
+  if (s.hasPinA && s.hasPinB) m = 2;
+  if (s.hasPinA && s.hasPinB && s.andOk) m = 3;
+  if (s.hasPinA && s.hasPinB && s.andOk && s.hasLedX) m = 4;
+  if (m === 4) {
+    if (s.xFed) return 7;
+    if (s.bothAndInputs) return 6;
+    if (s.feedsIn0 || s.feedsIn1) return 5;
+  }
+  return m;
 }
 
 export const Level1Guided = {
   id: 1,
-  /** Set on the live `currentLevel` when this is the new-player guided slice (not menu Gate Basics). */
+  /** Set on `currentLevel` only for the new-player guided slice (not menu Gate Basics). */
   isGuidedIntro: true,
   title: "GUIDED: FIRST AND GATE",
-  subtitle: "WIRE ONLY",
-  timeLimit: 240,
+  subtitle: "PLACE & WIRE",
+  timeLimit: 300,
   objective:
-    "**Training charge** — we placed **A**, **B**, an **AND** gate, and LED **X** for you. Drag three wires: **A** and **B** into the AND’s two inputs, then AND’s output into **X**. Tap orange pins to flip 0/1. When ready, **DISARM** (checks all four A,B combos).",
-  tutorContext: `Brand-new player FIRST puzzle only. Pins A,B + one AND gate + LED X are already on the canvas. They only drag wires (cyan output → orange input). Goal: X = A AND B. No NOT, no OR, no C pin, no dragging parts from toolbar unless they erased something. Exhaustive DISARM checks 4 rows (A,B only). Encourage tapping pins to see the LED, one wire at a time. After this they'll play full Gate Basics from the menu.`,
+    "**Training charge** — drag **A** and **B** from **INPUTS**, **AND** from **GATES**, and **LED X** from **OUTPUT LEDs** onto the canvas. Then wire **cyan → orange**: **A** and **B** into the **AND**, **AND** out into **X**. **Tap** the orange pin rings to flip **0/1**. **DISARM** checks all four **A,B** combos.",
+  tutorContext: `Brand-new player FIRST puzzle. Canvas starts empty: they drag pin A, pin B, one AND gate, and LED X from the lab toolbar onto the canvas, then wire cyan outputs to orange inputs until X = A AND B. Checklist panel shows mini wire/place animations. DISARM is exhaustive on A,B only (no C). After success they unlock full Gate Basics from the menu.`,
   clearCanvasHint:
-    "Canvas reset: training layout restored (**A**, **B**, **AND**, LED **X**). Rewire cyan → orange if you cleared the wires.",
+    "Canvas cleared — drag **A**, **B**, **AND**, and **LED X** from the bar again, then rewire **cyan → orange**.",
 
   /**
    * @param {import('../modules/circuitLab.js').CircuitLab} lab
    */
-  setupLab(lab) {
-    lab.placeAt("in:A", 120, 200);
-    lab.placeAt("in:B", 120, 340);
-    lab.placeAt("and", 430, 270);
-    lab.placeAt("led:X", 780, 270);
+  setupLab(_lab) {
+    /* Canvas starts empty — player places A, B, AND, LED X from the toolbar. */
   },
 
   resetProgress() {},
@@ -81,7 +115,7 @@ export const Level1Guided = {
     if (errPins) {
       return {
         ok: false,
-        message: `${errPins} Use **CLEAR CANVAS** if the board is a mess — it restores the training layout.`,
+        message: `${errPins} Drag **A** and **B** from **INPUTS** onto the canvas (or **CLEAR CANVAS** to start over).`,
       };
     }
 
@@ -89,7 +123,7 @@ export const Level1Guided = {
     if (!idX) {
       return {
         ok: false,
-        message: "LED **X** should be on the canvas. Hit **CLEAR CANVAS** to restore the training layout.",
+        message: "Add **LED X** from **OUTPUT LEDs** and wire the **AND** output into it.",
       };
     }
 
@@ -97,7 +131,7 @@ export const Level1Guided = {
     if (ands.length === 0) {
       return {
         ok: false,
-        message: "You need an **AND** gate. **CLEAR CANVAS** brings back the one we placed for you.",
+        message: "Place an **AND** gate from **GATES** on the canvas.",
       };
     }
 

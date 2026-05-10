@@ -8,7 +8,7 @@ import { AITutor } from "../modules/tutor.js";
 import { UIManager } from "../modules/ui.js";
 import { AudioManager } from "../modules/audio.js";
 import { Level1 } from "../levels/level1.js";
-import { Level1Guided } from "../levels/level1Guided.js";
+import { Level1Guided, getGuidedCoachMilestone } from "../levels/level1Guided.js";
 import { Level2 } from "../levels/level2.js";
 import { Level3 } from "../levels/level3.js";
 import { Level4 } from "../levels/level4.js";
@@ -16,6 +16,7 @@ import { Level5 } from "../levels/level5.js";
 import { CircuitLab } from "../modules/circuitLab.js";
 import { sendAssistantGameEvent } from "../modules/portalAssistant.js";
 import { getPortalLevelId, getPortalTargetConcept, getPortalTimeSpentSeconds } from "./portalGameContext.js";
+import { buildAssistantLevelSnapshot } from "./portalAssistantSnapshot.js";
 import { mountLabToolbar } from "./lab/LabToolbar.js";
 import { LabCanvasController } from "./lab/LabCanvasController.js";
 import {
@@ -38,7 +39,8 @@ import {
   isPortalGameDataActive,
   normalizePortalGameData,
   speedScoreFromElapsedMs,
-  updateHighScore,
+  updateCampaignLevelBest,
+  updateEndlessBest,
 } from "../modules/portalGameData.js";
 
 export class App {
@@ -74,8 +76,10 @@ export class App {
     this._tutorialSeenStorageKey = "circuitBreaker.tutorialSeen.v1";
     /** True after "START GUIDED RUN" until level index changes or return to menu. */
     this._guidedTutorialRun = false;
-    /** @type {number[]} */
-    this._guidedIntroTipTimeouts = [];
+    /** Guided intro sequential coach: matches `getGuidedCoachMilestone` 0–7. */
+    this._guidedCoachMilestone = 0;
+    /** First time player enables erase tool on guided run. */
+    this._guidedEraseHintShown = false;
 
     this.labCanvas = new LabCanvasController({
       isLabMode: () => this.labMode,
@@ -97,6 +101,7 @@ export class App {
     this._labRedraw();
     if (this.currentLevel?.isGuidedIntro) {
       refreshLevel1GuidedCoachFromDom(this.circuitLab);
+      this._updateGuidedSequentialCoach();
     }
   }
 
@@ -117,7 +122,15 @@ export class App {
    * Includes human-readable titles so STEM bridge / wiki tooling can reconcile context.
    */
   _portalAssistantContextEnvelope() {
+    const snapshot = buildAssistantLevelSnapshot({
+      endlessMode: this.endlessMode,
+      endlessSpec: this.endlessSpec,
+      currentLevel: this.currentLevel,
+      circuitLab: this.circuitLab,
+      engine: this.engine,
+    });
     return {
+      ...snapshot,
       campaignLevelNumericId: this.currentLevel?.id ?? null,
       endlessMode: !!this.endlessMode,
       portalLevelSlug: this._portalLevelId(),
@@ -152,7 +165,7 @@ export class App {
     const envelope = this._portalAssistantContextEnvelope();
     /** @type {Record<string, unknown>} */
     const mergedAdditional =
-      typeof passedContext === "object" && passedContext !== null ? { ...passedContext, ...envelope } : { ...envelope };
+      typeof passedContext === "object" && passedContext !== null ? { ...envelope, ...passedContext } : { ...envelope };
 
     sendAssistantGameEvent({
       ...restExtras,
@@ -218,7 +231,7 @@ export class App {
         <p><strong>Goal:</strong> Build a small circuit that makes the target LED output match the objective, then press <strong>DISARM</strong>.</p>
         <p><strong>Where things are:</strong> Drag parts from the top toolbar (INPUTS, GATES, LEDs) into the canvas. Use <strong>Erase</strong> to remove a part or wire.</p>
         <p><strong>Gate cheat sheet:</strong> AND = all 1s, OR = any 1, NOT = flips 0/1, XOR = different inputs.</p>
-        <p><strong>New-player route:</strong> We start with a <strong>tiny training charge</strong> (one AND, three wires) — then unlock the full <strong>Gate Basics</strong> level from the menu. Use <strong>BOMB INTEL</strong> anytime for hints.</p>
+        <p><strong>New-player route:</strong> A <strong>tiny training charge</strong> — you <strong>drag</strong> pins <strong>A</strong> &amp; <strong>B</strong>, an <strong>AND</strong>, and <strong>LED X</strong> from the bar, then <strong>wire cyan → orange</strong> (the checklist shows little motion demos). Then full <strong>Gate Basics</strong> from the menu. Use <strong>BOMB INTEL</strong> anytime for hints.</p>
       </div>
     `;
     this.ui.showModal(
@@ -258,14 +271,11 @@ export class App {
   /**
    * @param {number} runScore
    */
+  /** Endless only — campaign uses `updateCampaignLevelBest` per level. */
   _syncPortalHighScore(runScore, scoreMeta = {}) {
     if (!this._portalDataReady) return;
-    this.portalData = updateHighScore(this.portalData, runScore, scoreMeta);
-  }
-
-  _campaignSpeedLeaderboardScore() {
-    const elapsedMs = this._levelPlayStartedAt ? Date.now() - this._levelPlayStartedAt : 0;
-    return speedScoreFromElapsedMs(elapsedMs);
+    if (scoreMeta.mode !== "endless") return;
+    this.portalData = updateEndlessBest(this.portalData, runScore, scoreMeta);
   }
 
   _bindEvents() {
@@ -327,7 +337,6 @@ export class App {
       this.endlessMode = false;
       this.endlessSpec = null;
       this._guidedTutorialRun = false;
-      this._clearGuidedIntroTipTimeouts();
       this._teardownLabUi();
       this.engine.resetGame();
       this.ui.showMenu();
@@ -350,7 +359,7 @@ export class App {
   }
 
   _startLevel(index) {
-    this._clearGuidedIntroTipTimeouts();
+    this._resetGuidedNarrationState();
     if (index !== 0) {
       this._guidedTutorialRun = false;
     }
@@ -402,30 +411,71 @@ export class App {
     this.circuitLab.applyVisuals(this.renderer, CircuitLab.emptyInputStates());
 
     if (this.currentLevel.isGuidedIntro) {
-      this._pushGuidedIntroTips();
+      this._beginGuidedSequentialCoach();
     }
   }
 
-  _clearGuidedIntroTipTimeouts() {
-    for (const tid of this._guidedIntroTipTimeouts) {
-      window.clearTimeout(tid);
-    }
-    this._guidedIntroTipTimeouts = [];
+  _resetGuidedNarrationState() {
+    this._guidedCoachMilestone = 0;
+    this._guidedEraseHintShown = false;
   }
 
-  _pushGuidedIntroTips() {
-    this._clearGuidedIntroTipTimeouts();
-    const tips = [
-      "Pins **A** and **B** are fixed on the left — **tap the orange circles** beside each letter to flip between **0** and **1**.",
-      "An **AND** gate sits in the middle: its output stays **off** unless **both** inputs are **on**.",
-      "**Drag wires** from any **cyan** output to an **orange** input. Finish three links: **A → AND**, **B → AND**, **AND → X**.",
-      "Tiny LED **X** on the right is your target. Toggle A and B to see whether it matches — when it does for every combo, tap **DISARM**.",
-      "Follow the floating **training checklist**; there is **no fuse** on this first run.",
-    ];
-    tips.forEach((text, i) => {
-      const tid = window.setTimeout(() => this.ui.addChatMessage(text, "system"), 120 + i * 780);
-      this._guidedIntroTipTimeouts.push(tid);
-    });
+  _beginGuidedSequentialCoach() {
+    this.ui.addChatMessage(
+      "**Watch** the tiny **animations** in the checklist (place chips, then **cyan → orange** wires). **Tap** pins after wiring. **TOOLS → Erase** fixes mistakes. **No fuse** here.",
+      "system"
+    );
+    this.ui.addChatMessage(
+      "**Your move:** drag **pin A** or **pin B** from **INPUTS** onto the dark canvas (either first).",
+      "system"
+    );
+  }
+
+  /**
+   * Milestone-driven hints for the guided first-charge run (place parts → wire → erase tool).
+   */
+  _updateGuidedSequentialCoach() {
+    if (!this.currentLevel?.isGuidedIntro) return;
+
+    const lab = this.circuitLab;
+    if (lab.tool === "erase" && !this._guidedEraseHintShown) {
+      this._guidedEraseHintShown = true;
+      this.ui.addChatMessage(
+        "**Erase on** — **click** a **wire** or **chip** on the canvas to remove it. Click **Erase / disconnect wire** again to **turn off**.",
+        "system"
+      );
+    }
+
+    const m = getGuidedCoachMilestone(lab);
+
+    if (m < this._guidedCoachMilestone) {
+      this._guidedCoachMilestone = m;
+      let rewind =
+        "**Something was removed.** Rebuild: **INPUTS** → **A** & **B**, **GATES** → **AND**, **OUTPUT LEDs** → **X**, then **three wires**.";
+      if (m >= 4) {
+        if (m === 4) rewind = "Wires cleared — reconnect **A→AND**, **B→AND**, **AND→X** (**cyan** out, **orange** in).";
+        else if (m === 5) rewind = "An **AND** input wire is missing — wire **both pins** into the **AND** again.";
+        else if (m === 6) rewind = "The **X** wire dropped — drag **AND** **cyan out** → **X** **orange in** again.";
+      }
+      this.ui.addChatMessage(rewind, "system");
+      return;
+    }
+
+    const forward = {
+      1: "**Pin on board** — drop the **other INPUT** (**A** or **B**) from the bar.",
+      2: "**Two pins placed** — drag **AND** from **GATES** onto the canvas.",
+      3: "**AND placed** — drag **LED X** from **OUTPUT LEDs**.",
+      4: "**Parts ready.** **Drag** from a **cyan** dot to an **orange** dot: wire **one pin** into the **AND** first.",
+      5: "**One AND input wired** — connect the **other pin** to the **free orange** input.",
+      6: "**Both AND inputs done** — last wire: **AND cyan out** → **X orange in**.",
+      7: "**Wiring complete.** **Tap** **A** and **B**; **X** should follow **A∧B**. Then **DISARM**.",
+    };
+
+    while (this._guidedCoachMilestone < m) {
+      this._guidedCoachMilestone++;
+      const line = forward[/** @type {keyof typeof forward} */ (this._guidedCoachMilestone)];
+      if (line) this.ui.addChatMessage(line, "system");
+    }
   }
 
   async _startEndless() {
@@ -672,18 +722,29 @@ export class App {
   _levelComplete() {
     if (this.engine.state !== GameState.PLAYING) return;
     this._portalAssistantEvent("level_complete");
-    if (this.currentLevel) {
+
+    const timeBonus = Math.floor(this.engine.timeRemaining * 10);
+    const scoreBefore = this.engine.score;
+    const hintsUsedThisLevel = this.engine.hintsUsed;
+    this.engine.completeLevel();
+    const diffusalDelta = this.engine.score - scoreBefore;
+
+    if (this.currentLevel && !this.currentLevel.isGuidedIntro && this._portalDataReady) {
       const elapsedMs = this._levelPlayStartedAt ? Math.max(0, Date.now() - this._levelPlayStartedAt) : 0;
-      const speedScore = this._campaignSpeedLeaderboardScore();
-      this._syncPortalHighScore(speedScore, {
-        mode: "campaign",
-        metric: "speed_normalized",
+      const speedScore = speedScoreFromElapsedMs(elapsedMs);
+      this.portalData = updateCampaignLevelBest(this.portalData, this.currentLevel.id, {
+        speedScore,
         elapsedMs,
-        levelId: this.currentLevel.id,
+        diffusalScore: diffusalDelta,
+        hintsUsed: hintsUsedThisLevel,
+        scoreMeta: {
+          mode: "campaign",
+          metric: "speed_normalized",
+          levelId: this.currentLevel.id,
+          elapsedMs,
+        },
       });
     }
-    const timeBonus = Math.floor(this.engine.timeRemaining * 10);
-    this.engine.completeLevel();
 
     const hasNext = this.engine.currentLevelIndex < this.levels.length - 1;
     this.ui.showSuccessModal(
@@ -691,11 +752,17 @@ export class App {
       timeBonus,
       () => {
         this._guidedTutorialRun = false;
+        this._resetGuidedNarrationState();
         this.engine.resetGame();
         this.ui.showMenu();
       },
       hasNext
         ? () => {
+            if (this.currentLevel?.isGuidedIntro) {
+              this._guidedTutorialRun = false;
+              this._startLevel(0);
+              return;
+            }
             this.engine.nextLevel();
             this._startLevel(this.engine.currentLevelIndex);
           }
@@ -720,6 +787,7 @@ export class App {
     this.ui.elements.modalBtn2.onclick = () => {
       this.ui.hideModal();
       this._guidedTutorialRun = false;
+      this._resetGuidedNarrationState();
       this.engine.resetGame();
       this.ui.showMenu();
     };

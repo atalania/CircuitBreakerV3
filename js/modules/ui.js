@@ -137,7 +137,7 @@ export class UIManager {
   }
 
   updateObjective(text) {
-    this.elements.objectiveText.textContent = text;
+    this.elements.objectiveText.innerHTML = this._escapeHtmlWithBold(text);
   }
 
   // ---- Chat ----
@@ -160,7 +160,7 @@ export class UIManager {
       <div class="chat-avatar">${avatar}</div>
       <div class="chat-content">
         <div class="chat-sender">${name}</div>
-        <div class="chat-text">${this._escapeHtml(text)}</div>
+        <div class="chat-text">${this._escapeHtmlWithBold(text)}</div>
       </div>
     `;
 
@@ -272,5 +272,11 @@ export class UIManager {
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /** Escape HTML, then turn `**like this**` into <strong> (trusted game copy + AI briefs). */
+  _escapeHtmlWithBold(str) {
+    const esc = this._escapeHtml(str);
+    return esc.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   }
 }

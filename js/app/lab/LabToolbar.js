@@ -10,7 +10,7 @@ import { svgClientToSvg } from "./svgClientToSvg.js";
  * @property {() => void} onLabChanged
  * @property {(text: string) => void} addSystemMessage
  * @property {any} Level1 — default level 1 module (fallback)
- * @property {() => any} [getLevel1ForCanvasReset] — Level1 vs guided intro variant for CLEAR CANVAS seed
+ * @property {() => any} [getLevel1ForCanvasReset] — Level1 vs guided intro for CLEAR CANVAS seed
  * @property {() => void} [afterClearLevel4]
  * @property {(cur: { id: number } | null) => void} [afterCanvasClear]
  */
@@ -131,6 +131,7 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
           lab.tool = "erase";
           if (eraseBtn) eraseBtn.classList.add("active");
         }
+        host.onLabChanged();
       }
     });
   });

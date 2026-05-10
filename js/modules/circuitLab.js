@@ -280,6 +280,42 @@ export class CircuitLab {
     });
   }
 
+  /**
+   * Structured lab state for portal assistant events (not the legacy JSON string used by in-game tutor).
+   * @returns {{
+   *   blockCounts: Record<string, number>,
+   *   wireCount: number,
+   *   pinValues: Record<string, number>,
+   *   ledLabels: string[],
+   *   inputPinsOnCanvas: { letter: string, value: number }[],
+   *   hasJk: boolean,
+   *   hasSr: boolean
+   * }}
+   */
+  snapshotForAssistant() {
+    /** @type {Record<string, number>} */
+    const blockCounts = {};
+    for (const b of this.blocks) {
+      blockCounts[b.kind] = (blockCounts[b.kind] || 0) + 1;
+    }
+    const ledLabels = this.blocks
+      .filter((b) => b.kind === "led" && b.label)
+      .map((b) => String(b.label))
+      .sort();
+    const inputPinsOnCanvas = this.blocks
+      .filter((b) => b.kind === "source" && b.pin)
+      .map((b) => ({ letter: String(b.pin), value: b.value ? 1 : 0 }));
+    return {
+      blockCounts,
+      wireCount: this.wires.length,
+      pinValues: this.getPinValues(),
+      ledLabels,
+      inputPinsOnCanvas,
+      hasJk: this.blocks.some((b) => b.kind === "jk"),
+      hasSr: this.blocks.some((b) => b.kind === "sr"),
+    };
+  }
+
   render(renderer) {
     renderer.clear();
     const svg = renderer.createSVG(920, 560);

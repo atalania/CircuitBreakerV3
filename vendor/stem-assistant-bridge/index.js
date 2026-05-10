@@ -1,10 +1,7 @@
 /**
- * Drop-in shim for stem-assistant-bridge when the real package path is unavailable
- * (standalone clone). The portal CI runs npm install from .game-sources/<game>/ with:
- *   "stem-assistant-bridge": "file:../../packages/stem-assistant-bridge"
- *
- * API surface mirrors the portal integration guide GameEvent helpers.
- * Replace this path in vite.resolve.alias only when resolving the real npm/file package.
+ * Embedded shim for stem-assistant-bridge when the portal monorepo package is not linked.
+ * Matches the Web Assistant Bridge guide: ASSISTANT_GAME_EVENT payloads, helpers, and an
+ * automatic first level_start when embedded (same idea as the shared package).
  */
 import gameData from "../../data/game.json";
 
@@ -25,9 +22,30 @@ function resolvedGameId(override) {
   return gameIdFallback();
 }
 
+function isEmbedded() {
+  try {
+    return typeof window !== "undefined" && window.parent !== window.self;
+  } catch {
+    return true;
+  }
+}
+
 function post(payload) {
-  if (typeof window === "undefined" || !window.parent || typeof window.parent.postMessage !== "function") return;
+  if (typeof window === "undefined" || !window.parent || typeof window.parent.postMessage !== "function") {
+    return;
+  }
   window.parent.postMessage(payload, "*");
+}
+
+function emit(eventType, extra) {
+  const gid =
+    typeof extra.gameId === "string" && extra.gameId.trim() ? extra.gameId.trim() : resolvedGameId();
+  const rest = { ...extra };
+  delete rest.gameId;
+  post({
+    type: "ASSISTANT_GAME_EVENT",
+    payload: { eventType, gameId: gid, ...rest },
+  });
 }
 
 /**
@@ -55,6 +73,18 @@ export function initStemAssistantBridge(opts = {}) {
       targetOrigin: opts.targetOrigin,
     },
   });
+
+  if (!isEmbedded()) return;
+
+  const levelId =
+    typeof opts.defaultLevelId === "string" && opts.defaultLevelId.trim()
+      ? opts.defaultLevelId.trim()
+      : "level_1";
+
+  emit("level_start", {
+    levelId,
+    targetConcept: bridgeConfig.defaultTargetConcept,
+  });
 }
 
 export function setStemAssistantHintCount(/* _n */) {}
@@ -79,17 +109,6 @@ export function sendStemAssistantEvent(event) {
   post({
     type: "ASSISTANT_GAME_EVENT",
     payload: { eventType, gameId: gid, ...copy },
-  });
-}
-
-function emit(eventType, extra) {
-  const gid =
-    typeof extra.gameId === "string" && extra.gameId.trim() ? extra.gameId.trim() : resolvedGameId();
-  const rest = { ...extra };
-  delete rest.gameId;
-  post({
-    type: "ASSISTANT_GAME_EVENT",
-    payload: { eventType, gameId: gid, ...rest },
   });
 }
 
