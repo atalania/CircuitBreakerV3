@@ -54,6 +54,34 @@ export class LabCanvasController {
     this._jkClockEnd = (e) => this._onJkClockEnd(e);
   }
 
+  /**
+   * Keeps pointer events on the SVG while dragging so scrollable ancestors (mobile lab UI)
+   * do not steal touch moves.
+   * @param {SVGSVGElement | null | undefined} svg
+   * @param {PointerEvent} e
+   */
+  _captureSvgPointer(svg, e) {
+    if (!svg || typeof e.pointerId !== "number") return;
+    try {
+      svg.setPointerCapture(e.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  /**
+   * @param {SVGSVGElement | null | undefined} svg
+   * @param {PointerEvent} e
+   */
+  _releaseSvgPointer(svg, e) {
+    if (!svg || typeof e.pointerId !== "number") return;
+    try {
+      svg.releasePointerCapture(e.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   _labeledPinDetachListeners() {
     window.removeEventListener("pointermove", this._labeledPinMove);
     window.removeEventListener("pointerup", this._labeledPinEnd, { capture: true });
@@ -73,6 +101,7 @@ export class LabCanvasController {
   _jkClockGestureStart(e, blockId) {
     this._jkClockDetachListeners();
     e.preventDefault();
+    this._captureSvgPointer(this.host.getRenderer()?.svg, e);
     this._jkClockGesture = /** @type {any} */ ({
       blockId,
       clientX: e.clientX,
@@ -105,21 +134,25 @@ export class LabCanvasController {
       const { x, y } = svgClientToSvg(svg, e.clientX, e.clientY);
       this._blockDrag = { id: g.blockId, lastX: x, lastY: y, kind: "gate" };
       e.preventDefault();
+      this._captureSvgPointer(svg, e);
       window.addEventListener("pointermove", this._blockMove);
       window.addEventListener("pointerup", this._blockPointerUp, { once: true });
     }
   }
 
   /**
-   * @param {PointerEvent} _e
+   * @param {PointerEvent} e
    */
-  _onJkClockEnd(_e) {
+  _onJkClockEnd(e) {
     const gesture = this._jkClockGesture;
     this._jkClockDetachListeners();
     const becameDrag = gesture && gesture._becameDrag;
     const bid = gesture && gesture.blockId;
     this._jkClockGesture = null;
-    if (becameDrag || !bid) return;
+    if (becameDrag) return;
+    const svg = this.host.getRenderer()?.svg;
+    if (svg) this._releaseSvgPointer(svg, e);
+    if (!bid || e.type === "pointercancel") return;
     this.host.onJkPulse(bid);
   }
 
@@ -131,6 +164,7 @@ export class LabCanvasController {
   _labeledPinGestureStart(e, blockId) {
     this._labeledPinDetachListeners();
     e.preventDefault();
+    this._captureSvgPointer(this.host.getRenderer()?.svg, e);
     this._labeledPinGesture = /** @type {any} */ ({
       blockId,
       clientX: e.clientX,
@@ -163,6 +197,7 @@ export class LabCanvasController {
       const { x, y } = svgClientToSvg(svg, e.clientX, e.clientY);
       this._blockDrag = { id: g.blockId, lastX: x, lastY: y, kind: "cxcy" };
       e.preventDefault();
+      this._captureSvgPointer(svg, e);
       window.addEventListener("pointermove", this._blockMove);
       window.addEventListener("pointerup", this._blockPointerUp, { once: true });
     }
@@ -171,15 +206,17 @@ export class LabCanvasController {
   /**
    * @param {PointerEvent} e
    */
-  _onLabeledPinEnd(_e) {
+  _onLabeledPinEnd(e) {
     const gesture = this._labeledPinGesture;
     this._labeledPinDetachListeners();
+    this._releaseSvgPointer(this.host.getRenderer()?.svg, e);
 
     const becameDrag = gesture && gesture._becameDrag;
     const bid = gesture && gesture.blockId;
     this._labeledPinGesture = null;
 
     if (becameDrag || !bid) return;
+    if (e.type === "pointercancel") return;
 
     const lab = this.host.getCircuitLab();
     if (!lab.blocks.some((z) => z.id === bid)) return;
@@ -251,6 +288,7 @@ export class LabCanvasController {
         if (this.host.getCircuitLab().tool === "erase") return;
         e.preventDefault();
         e.stopPropagation();
+        this._captureSvgPointer(svg, e);
         this._wireDrag = {
           fromKey: el.dataset.portKey || "",
           startCx: parseFloat(el.getAttribute("cx") || "0"),
@@ -327,6 +365,7 @@ export class LabCanvasController {
       kind: isGate || isMacro ? "gate" : "cxcy",
     };
     e.preventDefault();
+    this._captureSvgPointer(svg, e);
     window.addEventListener("pointermove", this._blockMove);
     window.addEventListener("pointerup", this._blockPointerUp, { once: true });
   }
@@ -336,6 +375,7 @@ export class LabCanvasController {
    */
   _onBlockMove(e) {
     if (!this._blockDrag) return;
+    if (e.cancelable) e.preventDefault();
     const renderer = this.host.getRenderer();
     if (!renderer || !renderer.svg) return;
     this._lastPointerEvent = e;
@@ -367,7 +407,13 @@ export class LabCanvasController {
     });
   }
 
-  _onBlockPointerUp() {
+  /**
+   * @param {PointerEvent} e
+   */
+  _onBlockPointerUp(e) {
+    const renderer = this.host.getRenderer();
+    const s = renderer && renderer.svg;
+    if (s) this._releaseSvgPointer(s, e);
     if (this._blockMoveRaf != null) {
       cancelAnimationFrame(this._blockMoveRaf);
       this._blockMoveRaf = null;
@@ -384,6 +430,7 @@ export class LabCanvasController {
     const d = this._wireDrag;
     const renderer = this.host.getRenderer();
     if (!d || !renderer || !renderer.svg) return;
+    if (e.cancelable) e.preventDefault();
     const { x, y } = svgClientToSvg(renderer.svg, e.clientX, e.clientY);
     this.host.getCircuitLab().setWirePreviewPath(renderer, wirePath([d.startCx, d.startCy], [x, y]));
   }
@@ -392,10 +439,12 @@ export class LabCanvasController {
    * @param {PointerEvent} e
    */
   _onWireUp(e) {
+    const renderer = this.host.getRenderer();
+    const s = renderer && renderer.svg;
+    if (s) this._releaseSvgPointer(s, e);
     window.removeEventListener("pointermove", this._wireMove);
     const d = this._wireDrag;
     this._wireDrag = null;
-    const renderer = this.host.getRenderer();
     if (renderer && renderer.svg) this.host.getCircuitLab().hideWirePreview(renderer);
     if (d && d.fromKey) {
       const svg = renderer && renderer.svg;

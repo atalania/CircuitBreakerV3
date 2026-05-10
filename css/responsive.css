@@ -242,6 +242,20 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Tap-to-place palette (mobile): selected chip + canvas ready for drop */
+  .lab-palette-chip.lab-palette-chip--pending {
+    box-shadow:
+      0 0 0 2px rgba(66, 232, 255, 0.85),
+      0 0 18px rgba(61, 184, 255, 0.35);
+    border-color: rgba(66, 232, 255, 0.85);
+  }
+
+  .circuit-viewport.lab-palette-pending-drop {
+    box-shadow:
+      inset 0 0 0 2px rgba(66, 232, 255, 0.35),
+      0 0 0 1px rgba(232, 188, 8, 0.12);
+  }
+
   #circuit-container {
     align-items: flex-start;
     justify-content: flex-start;

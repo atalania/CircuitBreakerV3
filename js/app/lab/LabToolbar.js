@@ -1,5 +1,11 @@
 import { isValidLabPlaceKind } from "./isValidLabPlaceKind.js";
+import { labBlockIdFromElement } from "./labBlockIdFromElement.js";
 import { svgClientToSvg } from "./svgClientToSvg.js";
+
+/** Matches css/responsive.css — tap-to-place palette only on small viewports. */
+function isMobilePaletteUi() {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
+}
 
 /**
  * @typedef {object} LabToolbarHost
@@ -69,13 +75,77 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
   const viewport = document.querySelector(".circuit-viewport");
   panel.insertBefore(bar, viewport || panel.firstChild);
 
+  /** @type {string | null} */
+  let pendingPlaceKind = null;
+
+  const setPendingPlaceKind = (kind) => {
+    pendingPlaceKind = kind;
+    bar.querySelectorAll("[data-lab-place]").forEach((c) => {
+      const id = c.getAttribute("data-lab-place") || "";
+      c.classList.toggle("lab-palette-chip--pending", kind !== null && id === kind);
+      c.setAttribute("aria-pressed", kind !== null && id === kind ? "true" : "false");
+    });
+    if (viewport) {
+      viewport.classList.toggle("lab-palette-pending-drop", kind !== null);
+    }
+  };
+
   bar.querySelectorAll("[data-lab-place]").forEach((chip) => {
     chip.addEventListener("dragstart", (e) => {
+      if (isMobilePaletteUi()) {
+        e.preventDefault();
+        return;
+      }
       const place = chip.getAttribute("data-lab-place") || "";
       e.dataTransfer.setData("text/plain", place);
       e.dataTransfer.effectAllowed = "copy";
     });
+
+    chip.addEventListener("click", (e) => {
+      if (!isMobilePaletteUi() || !host.isLabMode()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const place = chip.getAttribute("data-lab-place") || "";
+      if (!isValidLabPlaceKind(place)) return;
+      if (pendingPlaceKind === place) {
+        setPendingPlaceKind(null);
+      } else {
+        setPendingPlaceKind(place);
+        const lab = host.getCircuitLab();
+        if (lab.tool === "erase") {
+          lab.tool = null;
+          bar.querySelectorAll(".lab-tool").forEach((b) => b.classList.remove("active"));
+        }
+      }
+    });
   });
+
+  /**
+   * Second tap on the canvas drops the selected palette item (touch / narrow UI).
+   * Uses `click` so panning/scrolling the viewport does not fire on pointerdown.
+   */
+  const onMobileCanvasPlaceClick = (e) => {
+    if (!isMobilePaletteUi() || !pendingPlaceKind || !host.isLabMode()) return;
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (t.closest("#lab-toolbar")) return;
+    const svg = host.getRenderer()?.svg;
+    if (!svg || !svg.contains(t)) return;
+    if (t.closest(".lab-port")) return;
+    if (labBlockIdFromElement(t)) return;
+    if (t.closest("[data-lab-wire-id]")) return;
+
+    const { x, y } = svgClientToSvg(svg, e.clientX, e.clientY);
+    host.getCircuitLab().placeAt(pendingPlaceKind, x, y);
+    host.onLabChanged();
+    setPendingPlaceKind(null);
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+
+  if (circuitDropEl) {
+    circuitDropEl.addEventListener("click", onMobileCanvasPlaceClick, true);
+  }
 
   const onDragOver = (e) => {
     if (!host.isLabMode()) return;
@@ -105,6 +175,7 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
       const tool = btn.getAttribute("data-lab-tool");
       const lab = host.getCircuitLab();
       if (tool === "clear") {
+        setPendingPlaceKind(null);
         lab.clear();
         lab.tool = null;
         bar.querySelectorAll(".lab-tool").forEach((b) => b.classList.remove("active"));
@@ -122,6 +193,7 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
         return;
       }
       if (tool === "erase") {
+        setPendingPlaceKind(null);
         const eraseBtn = bar.querySelector('[data-lab-tool="erase"]');
         const on = eraseBtn && eraseBtn.classList.contains("active");
         bar.querySelectorAll(".lab-tool").forEach((b) => b.classList.remove("active"));
@@ -141,7 +213,9 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
       if (circuitDropEl) {
         circuitDropEl.removeEventListener("dragover", onDragOver, true);
         circuitDropEl.removeEventListener("drop", onDrop, true);
+        circuitDropEl.removeEventListener("click", onMobileCanvasPlaceClick, true);
       }
+      if (viewport) viewport.classList.remove("lab-palette-pending-drop");
       bar.remove();
     },
   };
