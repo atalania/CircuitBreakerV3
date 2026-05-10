@@ -1,34 +1,51 @@
 /* Circuit lab palette toolbar */
 /* ---- Circuit Lab toolbar ---- */
 /* Shown only when .lab-toolbar--tap-place is set by JS */
-.lab-tap-place-hint {
+.lab-tap-place-hint-wrap {
   display: none;
   flex-basis: 100%;
   margin: 0 0 0.35rem;
-  padding: 0.45rem 0.55rem;
+  padding: 0.5rem 0.55rem;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  line-height: 1.38;
+  line-height: 1.42;
   color: #b8eaf8;
   background: rgba(61, 184, 255, 0.09);
   border: 1px solid rgba(66, 232, 255, 0.35);
   border-radius: 6px;
 }
 
-.lab-toolbar--tap-place .lab-tap-place-hint {
+.lab-toolbar--tap-place .lab-tap-place-hint-wrap {
   display: block;
 }
 
-.lab-tap-place-hint strong {
+.lab-tap-place-hint-line {
+  margin: 0 0 0.45rem;
+}
+
+.lab-tap-place-hint-line:last-child {
+  margin-bottom: 0;
+}
+
+.lab-tap-place-hint-wrap strong {
   font-weight: 700;
   color: var(--accent-cyan);
 }
 
-.lab-tap-place-hint em {
+.lab-tap-place-hint-wrap em {
   font-style: normal;
   font-weight: 700;
   color: var(--hazard-yellow);
+}
+
+.lab-tap-place-hint-desktop {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  line-height: 1.35;
 }
 
 .lab-toolbar {

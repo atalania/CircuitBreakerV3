@@ -78,6 +78,7 @@ See **`MOBILE_EMBED_GAME_GUIDE.md`** for iframe behavior, `embedHeight`, and how
 - **Circuit panel**
   - The **objective bar** explains the current disarm condition.
   - The **circuit viewport** hosts your gates, inputs, outputs, and wires.
+  - **Touch / phone (lab):** On-screen instructions appear above the palette. Summarized: tap a chip then empty canvas to place; tap a **cyan** output pin (glows), then an **orange** input to wire; tap the same cyan pin to cancel wiring.
   - **Actions**:
     - `DISARM`: submit your current configuration and check if the bomb is safe.
     - `↺ REWIND FUSE`: reset timing / sequence as designed per level.

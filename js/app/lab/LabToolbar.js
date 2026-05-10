@@ -1,28 +1,7 @@
 import { isValidLabPlaceKind } from "./isValidLabPlaceKind.js";
 import { labBlockIdFromElement } from "./labBlockIdFromElement.js";
 import { svgClientToSvg } from "./svgClientToSvg.js";
-
-/** Squared px movement below this counts as a tap (not scroll / drag). */
-const TAP_MOVE_THRESH2 = 14 * 14;
-
-/**
- * True when drag-from-palette is unreliable (touch) or layout matches mobile breakpoints.
- * Coarse-pointer catches phones in wide iframes and “desktop site” layouts.
- */
-function shouldUseTapPlace() {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(pointer: coarse)").matches ||
-    window.matchMedia("(max-width: 900px)").matches
-  );
-}
-
-function tapPlaceMediaQueries() {
-  return [
-    window.matchMedia("(max-width: 900px)"),
-    window.matchMedia("(pointer: coarse)"),
-  ];
-}
+import { TAP_MOVE_THRESH2, shouldUseTapPlace, tapPlaceMediaQueries } from "./tapPlaceUi.js";
 
 /**
  * @typedef {object} LabToolbarHost
@@ -51,10 +30,17 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
   bar.id = "lab-toolbar";
   bar.className = "lab-toolbar";
   bar.innerHTML = `
-      <p class="lab-tap-place-hint" role="note" aria-live="polite">
-        <strong>How to place parts:</strong> Tap a chip below to select it, then tap an <em>empty</em> spot on the dark circuit canvas to drop it there.
-        Tap the same chip again to cancel. (Drag-from-palette is for a mouse.)
-      </p>
+      <div class="lab-tap-place-hint-wrap" role="note" aria-live="polite">
+        <p class="lab-tap-place-hint-line">
+          <strong>Mobile — place parts:</strong> Tap a chip below, then tap an <em>empty</em> area on the dark canvas to drop it.
+          Tap the <em>same chip</em> again to cancel selection.
+        </p>
+        <p class="lab-tap-place-hint-line">
+          <strong>Mobile — wires:</strong> Tap a <em>cyan</em> output pin first (it gets a <em>yellow</em> highlight), then tap the <em>orange</em> input pin you want connected.
+          Tap the <em>same cyan pin</em> again to cancel wiring. Choosing a palette chip also clears a pending wire.
+          <span class="lab-tap-place-hint-desktop">On a mouse, you can still drag chips from the palette and drag wires pin-to-pin.</span>
+        </p>
+      </div>
       <span class="lab-toolbar-label">INPUTS</span>
       <div class="lab-palette-chip" draggable="true" data-lab-place="in:A" title="Pin A">A</div>
       <div class="lab-palette-chip" draggable="true" data-lab-place="in:B" title="Pin B">B</div>
@@ -105,6 +91,7 @@ export function mountLabToolbar(panel, circuitDropEl, host) {
   const chipTapStarts = new WeakMap();
 
   const setPendingPlaceKind = (kind) => {
+    window.dispatchEvent(new CustomEvent("circuit-clear-tap-wire"));
     pendingPlaceKind = kind;
     bar.querySelectorAll("[data-lab-place]").forEach((c) => {
       const id = c.getAttribute("data-lab-place") || "";

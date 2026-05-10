@@ -3,6 +3,7 @@ import { GameState } from "../../modules/engine.js";
 import { evaluateWithPins } from "../../levels/labLevelUtils.js";
 import { labBlockIdFromElement } from "./labBlockIdFromElement.js";
 import { svgClientToSvg } from "./svgClientToSvg.js";
+import { shouldUseTapPlace, TAP_MOVE_THRESH2 } from "./tapPlaceUi.js";
 
 /**
  * @typedef {object} LabCanvasHost
@@ -52,6 +53,12 @@ export class LabCanvasController {
     this._labeledPinEnd = (e) => this._onLabeledPinEnd(e);
     this._jkClockMove = (e) => this._onJkClockMove(e);
     this._jkClockEnd = (e) => this._onJkClockEnd(e);
+
+    /** Pending output port key for tap-to-connect (touch / narrow UI). */
+    /** @type {string | null} */
+    this._tapWireFromKey = null;
+    this._onClearTapWireEvt = () => this._clearTapWirePending();
+    window.addEventListener("circuit-clear-tap-wire", this._onClearTapWireEvt);
   }
 
   /**
@@ -82,6 +89,28 @@ export class LabCanvasController {
     }
   }
 
+  _clearTapWirePending() {
+    this._tapWireFromKey = null;
+    const svg = this.host.getRenderer()?.svg;
+    if (svg) {
+      svg.querySelectorAll(".lab-port--wire-pending").forEach((n) => n.classList.remove("lab-port--wire-pending"));
+    }
+  }
+
+  /**
+   * @param {SVGSVGElement} svg
+   */
+  _applyTapWirePendingHighlight(svg) {
+    svg.querySelectorAll(".lab-port").forEach((p) => p.classList.remove("lab-port--wire-pending"));
+    if (!this._tapWireFromKey) return;
+    const portEl = svg.querySelector(`[data-port-key="${CSS.escape(this._tapWireFromKey)}"]`);
+    if (!portEl) {
+      this._tapWireFromKey = null;
+      return;
+    }
+    portEl.classList.add("lab-port--wire-pending");
+  }
+
   _labeledPinDetachListeners() {
     window.removeEventListener("pointermove", this._labeledPinMove);
     window.removeEventListener("pointerup", this._labeledPinEnd, { capture: true });
@@ -100,6 +129,7 @@ export class LabCanvasController {
    */
   _jkClockGestureStart(e, blockId) {
     this._jkClockDetachListeners();
+    this._clearTapWirePending();
     e.preventDefault();
     this._captureSvgPointer(this.host.getRenderer()?.svg, e);
     this._jkClockGesture = /** @type {any} */ ({
@@ -163,6 +193,7 @@ export class LabCanvasController {
    */
   _labeledPinGestureStart(e, blockId) {
     this._labeledPinDetachListeners();
+    this._clearTapWirePending();
     e.preventDefault();
     this._captureSvgPointer(this.host.getRenderer()?.svg, e);
     this._labeledPinGesture = /** @type {any} */ ({
@@ -279,25 +310,113 @@ export class LabCanvasController {
     svg.addEventListener("pointerdown", this._svgPointerDown);
 
     svg.querySelectorAll(".lab-port").forEach((c) => {
-      c.addEventListener("pointerdown", (e) => {
-        if (!this.host.isLabMode()) return;
-        const el = /** @type {Element} */ (e.target);
-        const port = el.dataset.port || "";
-        const isOut = port === "out" || port.startsWith("outQ");
-        if (!isOut) return;
-        if (this.host.getCircuitLab().tool === "erase") return;
-        e.preventDefault();
-        e.stopPropagation();
-        this._captureSvgPointer(svg, e);
-        this._wireDrag = {
-          fromKey: el.dataset.portKey || "",
-          startCx: parseFloat(el.getAttribute("cx") || "0"),
-          startCy: parseFloat(el.getAttribute("cy") || "0"),
-        };
-        window.addEventListener("pointermove", this._wireMove);
-        window.addEventListener("pointerup", this._wireUp, { once: true });
-      });
+      const el = /** @type {Element} */ (c);
+      const port = el.dataset.port || "";
+      const isOut = port === "out" || port.startsWith("outQ");
+
+      if (isOut) {
+        el.addEventListener("pointerdown", (e) => {
+          if (!this.host.isLabMode()) return;
+          const lab = this.host.getCircuitLab();
+          if (lab.tool === "erase") return;
+          const tgt = /** @type {Element} */ (e.target);
+          const pk = tgt.dataset.portKey || "";
+          const cx = parseFloat(tgt.getAttribute("cx") || "0");
+          const cy = parseFloat(tgt.getAttribute("cy") || "0");
+
+          if (shouldUseTapPlace()) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sx = e.clientX;
+            const sy = e.clientY;
+            const pid = e.pointerId;
+
+            const cleanupOut = () => {
+              window.removeEventListener("pointermove", onOutMove);
+              window.removeEventListener("pointerup", onOutUp);
+              window.removeEventListener("pointercancel", onOutUp);
+            };
+
+            const onOutMove = (ev) => {
+              if (ev.pointerId !== pid) return;
+              const dx = ev.clientX - sx;
+              const dy = ev.clientY - sy;
+              if (dx * dx + dy * dy > TAP_MOVE_THRESH2) {
+                cleanupOut();
+                this._clearTapWirePending();
+                this._captureSvgPointer(svg, ev);
+                this._wireDrag = { fromKey: pk, startCx: cx, startCy: cy };
+                window.addEventListener("pointermove", this._wireMove);
+                window.addEventListener("pointerup", this._wireUp, { once: true });
+              }
+            };
+
+            const onOutUp = (ev) => {
+              if (ev.pointerId !== pid) return;
+              cleanupOut();
+              const dx = ev.clientX - sx;
+              const dy = ev.clientY - sy;
+              if (dx * dx + dy * dy > TAP_MOVE_THRESH2) return;
+              if (this._tapWireFromKey === pk) {
+                this._clearTapWirePending();
+              } else {
+                this._tapWireFromKey = pk;
+                this._applyTapWirePendingHighlight(svg);
+              }
+            };
+
+            window.addEventListener("pointermove", onOutMove);
+            window.addEventListener("pointerup", onOutUp);
+            window.addEventListener("pointercancel", onOutUp);
+            return;
+          }
+
+          e.preventDefault();
+          e.stopPropagation();
+          this._clearTapWirePending();
+          this._captureSvgPointer(svg, e);
+          this._wireDrag = {
+            fromKey: pk,
+            startCx: cx,
+            startCy: cy,
+          };
+          window.addEventListener("pointermove", this._wireMove);
+          window.addEventListener("pointerup", this._wireUp, { once: true });
+        });
+      } else if (shouldUseTapPlace()) {
+        el.addEventListener("pointerdown", (e) => {
+          if (!this.host.isLabMode()) return;
+          if (this.host.getCircuitLab().tool === "erase") return;
+          if (!this._tapWireFromKey) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const toKey = el.getAttribute("data-port-key") || el.dataset.portKey || "";
+          const sx = e.clientX;
+          const sy = e.clientY;
+          const pid = e.pointerId;
+          let inFinished = false;
+
+          const endIn = (ev) => {
+            if (inFinished) return;
+            if (ev.pointerId !== pid) return;
+            inFinished = true;
+            window.removeEventListener("pointerup", endIn);
+            window.removeEventListener("pointercancel", endIn);
+            const dx = ev.clientX - sx;
+            const dy = ev.clientY - sy;
+            if (dx * dx + dy * dy > TAP_MOVE_THRESH2) return;
+            this.host.getCircuitLab().connectPorts(this._tapWireFromKey, toKey);
+            this._clearTapWirePending();
+            this.host.onLabChanged();
+          };
+
+          window.addEventListener("pointerup", endIn);
+          window.addEventListener("pointercancel", endIn);
+        });
+      }
     });
+
+    this._applyTapWirePendingHighlight(svg);
   }
 
   /**
@@ -358,6 +477,7 @@ export class LabCanvasController {
     const isLabeledPin = b.kind === "source" && b.pin;
     const canMove = isGate || isMacro || b.kind === "led" || isConstSource || isLabeledPin;
     if (!canMove) return;
+    this._clearTapWirePending();
     this._blockDrag = {
       id: bid,
       lastX: x,
