@@ -1,0 +1,97 @@
+/* SR latch level — sequence checklist + NOR-style reference */
+.sr-latch-tracker {
+  display: none;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  max-width: 280px;
+  background: rgba(13, 16, 24, 0.95);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.68rem;
+  z-index: 10;
+  line-height: 1.35;
+}
+
+.sr-latch-tracker.visible { display: block; }
+
+.sr-title {
+  color: var(--accent-blue);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+.sr-hint {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  text-align: center;
+  margin-bottom: 0.45rem;
+}
+
+.sr-step {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+  padding: 0.2rem 0;
+  color: var(--text-dim);
+  border-radius: 4px;
+}
+
+.sr-step-mark {
+  flex-shrink: 0;
+  width: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.sr-step-text { flex: 1; }
+
+.sr-step.sr-step-current {
+  color: var(--warning);
+  background: rgba(255, 170, 0, 0.06);
+}
+
+.sr-step.sr-step-done {
+  color: var(--accent-green);
+}
+
+.sr-step.sr-step-done .sr-step-mark {
+  color: var(--accent-green);
+}
+
+.sr-ref-block {
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sr-ref-title {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+.sr-ref-row {
+  display: grid;
+  grid-template-columns: 2.2rem 0.6rem 1fr;
+  gap: 0.25rem;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  padding: 0.08rem 0;
+}
+
+.sr-ref-row span:first-child {
+  letter-spacing: 2px;
+}
+
+.sr-ref-warn {
+  color: var(--danger);
+}

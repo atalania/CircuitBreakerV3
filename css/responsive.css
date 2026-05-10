@@ -1,0 +1,44 @@
+/* Breakpoints + SVG circuit hovers */
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .chat-panel { width: 260px; }
+  .menu-logo { font-size: 2.2rem; }
+}
+
+@media (max-width: 700px) {
+  .game-main { flex-direction: column; }
+  .chat-panel {
+    width: 100%;
+    flex: 0 0 min(200px, 32vh);
+    max-height: min(200px, 32vh);
+    height: auto;
+    border-left: none;
+    border-top: 1px solid var(--border-dim);
+  }
+  .timer-bar-track { width: 120px; }
+}
+
+/* Short laptop / zoomed windows: reserve space for DISARM row */
+@media (max-height: 720px) {
+  .hud-bar {
+    padding: 0.4rem 0.85rem;
+    min-height: 52px;
+  }
+  .timer-display { font-size: 1.25rem; }
+  .timer-eyebrow { letter-spacing: 0.2em; font-size: 0.5rem; }
+  .level-title { font-size: 0.82rem; }
+  .circuit-panel { padding: 0.4rem 0.65rem; }
+  .objective-bar {
+    padding: 0.45rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .action-bar { margin-top: 0.45rem; gap: 0.45rem; }
+  .action-btn { padding: 0.55rem 0.55rem; font-size: 0.68rem; }
+}
+
+/* ---- Switch / pin hover ---- */
+.circuit-switch:hover { filter: brightness(1.15); }
+.circuit-pin:hover { filter: brightness(1.12); }
+.circuit-gate { transition: filter 0.2s; }
+.circuit-source { cursor: grab; }
+.circuit-source:active { cursor: grabbing; }

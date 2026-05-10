@@ -1,0 +1,272 @@
+/* Menu screen */
+/* ============================================================
+   MENU SCREEN
+   ============================================================ */
+#menu-screen {
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 85%, rgba(255, 50, 30, 0.09) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 20%, rgba(232, 188, 8, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 70% 35%, rgba(40, 35, 30, 0.9) 0%, transparent 55%),
+    var(--bg-deep);
+}
+
+.menu-bomb-silhouette {
+  position: absolute;
+  width: min(90vw, 420px);
+  height: min(90vw, 420px);
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50% 50% 48% 48% / 42% 42% 58% 58%;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(30, 26, 22, 0.5) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 100%, rgba(255, 60, 40, 0.07) 0%, transparent 55%),
+    linear-gradient(165deg, rgba(18, 15, 12, 0.85), rgba(8, 6, 5, 0.95));
+  border: 2px solid rgba(232, 188, 8, 0.22);
+  box-shadow:
+    inset 0 -20px 50px rgba(255, 50, 20, 0.06),
+    0 0 80px rgba(255, 40, 20, 0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.menu-bomb-silhouette::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  transform: translateX(-50%);
+  width: 18%;
+  height: 14%;
+  background: linear-gradient(180deg, #3a3530, #1a1512);
+  border-radius: 4px;
+  border: 1px solid rgba(232, 188, 8, 0.35);
+  box-shadow: 0 0 12px rgba(255, 100, 40, 0.25);
+}
+
+.menu-bomb-silhouette::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -35%);
+  width: 3px;
+  height: 22%;
+  background: linear-gradient(180deg, var(--ember-hot), var(--ember), #4a3020);
+  border-radius: 2px;
+  box-shadow: 0 0 14px var(--ember);
+  animation: fuse-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes fuse-glow {
+  0%, 100% { opacity: 0.85; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.25); }
+}
+
+.menu-hazard-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard-yellow) 0 10px,
+    var(--hazard-black) 10px 20px
+  );
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.menu-hazard-edge--top { top: 0; }
+.menu-hazard-edge--bottom { bottom: 0; }
+
+.menu-container {
+  text-align: center;
+  max-width: 600px;
+  padding: 2.25rem 2rem;
+  position: relative;
+  z-index: 1;
+  background:
+    linear-gradient(145deg, rgba(22, 19, 17, 0.92), rgba(12, 10, 8, 0.96));
+  border: 2px solid var(--border-dim);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(232, 188, 8, 0.12),
+    0 20px 50px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.menu-container::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(232, 188, 8, 0.15);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.menu-classification {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.35em;
+  color: var(--danger);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  opacity: 0.95;
+  text-shadow: var(--glow-red);
+}
+
+.menu-logo {
+  font-family: 'Black Ops One', sans-serif;
+  font-size: clamp(2.4rem, 8vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--hazard-yellow);
+  text-shadow:
+    0 0 28px rgba(232, 188, 8, 0.5),
+    2px 2px 0 #4a1510,
+    0 0 40px rgba(255, 50, 30, 0.25);
+  margin-bottom: 0.35rem;
+  line-height: 1.05;
+  position: relative;
+}
+
+.menu-subtitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+}
+
+.menu-divider {
+  width: 120px;
+  height: 4px;
+  margin: 0 auto 1.75rem;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--hazard-yellow) 0 8px,
+    var(--hazard-black) 8px 16px
+  );
+  border-radius: 1px;
+  opacity: 0.9;
+}
+
+.menu-description {
+  font-size: 1rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Level Select */
+.level-grid {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.level-select-btn {
+  background: linear-gradient(180deg, #1c1814 0%, #13100d 100%);
+  border: 1px solid var(--border-dim);
+  border-left: 3px solid var(--hazard-yellow);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 112px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.level-select-btn:hover {
+  border-color: var(--ember);
+  border-left-color: var(--ember-hot);
+  color: var(--ember-hot);
+  box-shadow: var(--glow-ember);
+}
+
+.level-select-btn.active {
+  border-color: var(--accent-green);
+  border-left-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(98, 255, 110, 0.08);
+}
+
+.level-select-btn .lvl-num {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--hazard-yellow);
+  font-family: 'Black Ops One', sans-serif;
+  letter-spacing: 0.12em;
+}
+
+/* Start Button */
+.start-btn {
+  background:
+    linear-gradient(180deg, rgba(255, 60, 40, 0.15) 0%, rgba(30, 22, 18, 0.95) 100%);
+  border: 2px solid var(--danger);
+  color: var(--warning);
+  font-family: 'Black Ops One', sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  padding: 1rem 2.5rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(255, 194, 40, 0.5);
+  box-shadow:
+    0 0 20px rgba(255, 45, 61, 0.25),
+    inset 0 0 20px rgba(255, 50, 30, 0.06);
+}
+
+.start-btn:hover {
+  background: rgba(255, 45, 61, 0.18);
+  box-shadow: var(--glow-red);
+  transform: translateY(-2px);
+  color: #fff2c2;
+}
+
+.start-btn:active {
+  transform: translateY(0);
+}
+
+.menu-secondary-btn {
+  margin-top: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.menu-secondary-btn:hover {
+  color: var(--accent-cyan);
+  border-color: var(--accent-blue);
+  box-shadow: var(--glow-blue);
+}

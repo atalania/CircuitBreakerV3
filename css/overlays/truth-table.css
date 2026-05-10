@@ -1,0 +1,168 @@
+/* Truth table overlays — campaign levels 1–2, 5 */
+.truth-table-tracker {
+  display: none;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(13, 16, 24, 0.95);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  padding: 0.6rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  z-index: 10;
+}
+
+.truth-table-tracker.visible { display: block; }
+
+.tt-title {
+  color: var(--accent-blue);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+  text-align: center;
+}
+
+.tt-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+  color: var(--text-dim);
+}
+
+.tt-row.found {
+  color: var(--accent-green);
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.tt-row.wrong {
+  color: var(--danger);
+}
+
+.tt-progress {
+  color: var(--warning);
+  text-align: center;
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+}
+
+.truth-table-tracker--wide {
+  max-width: min(340px, 92vw);
+  font-size: 0.65rem;
+}
+
+.tt-head {
+  display: flex;
+  gap: 0.45rem;
+  align-items: baseline;
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  padding: 0.1rem 0.25rem 0.25rem;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.15rem;
+}
+
+.tt-head--single {
+  gap: 0.35rem;
+}
+
+.tt-head--single .tt-hdr-spec,
+.tt-head--single .tt-hdr-live {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  min-width: 1.6rem;
+}
+
+.tt-head--single .tt-hdr-mark {
+  margin-left: auto;
+}
+
+.tt-sub {
+  display: block;
+  font-size: 0.52rem;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+
+.tt-spec {
+  color: var(--accent-blue);
+  font-weight: bold;
+  min-width: 1rem;
+  text-align: center;
+}
+
+.tt-live {
+  min-width: 1rem;
+  text-align: center;
+  color: var(--text-bright);
+}
+
+.tt-check {
+  margin-left: auto;
+  min-width: 1rem;
+  text-align: right;
+}
+
+.tt-row.tt-row-current {
+  outline: 1px solid rgba(0, 180, 255, 0.35);
+  background: rgba(0, 120, 200, 0.06);
+}
+
+.tt-row--l1 {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tt-in {
+  letter-spacing: 2px;
+  min-width: 2.4rem;
+}
+
+.tt-spec-xyz {
+  color: var(--accent-blue);
+  letter-spacing: 4px;
+  font-weight: bold;
+}
+
+.tt-live-xyz {
+  letter-spacing: 3px;
+  margin-left: auto;
+}
+
+.tt-hdr-mid { flex: 1; text-align: center; }
+.tt-hdr-live { min-width: 3.2rem; text-align: right; }
+
+.tt-head--l1 .tt-hdr-mid { font-size: 0.55rem; }
+.tt-head--l1g .tt-hdr-mid { font-size: 0.55rem; }
+
+.tt-footnote {
+  margin-top: 0.35rem;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.tt-row--l1g {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tt-spec-x {
+  color: var(--accent-blue);
+  font-weight: bold;
+  margin-left: 0.25rem;
+}
+
+.tt-live-x {
+  margin-left: auto;
+  min-width: 1rem;
+  text-align: right;
+}

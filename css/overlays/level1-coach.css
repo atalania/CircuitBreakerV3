@@ -1,0 +1,227 @@
+/* Level 1 checklist / guided intro — draggable coach panel */
+.level1-coach {
+  display: none;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  left: auto;
+  max-width: 320px;
+  background: rgba(13, 16, 24, 0.96);
+  border: 1px solid var(--accent-green);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem 0.65rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  z-index: 10;
+  line-height: 1.4;
+  box-shadow: 0 4px 20px rgba(0, 255, 136, 0.08);
+}
+
+.level1-coach.visible { display: block; }
+
+.l1-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+  user-select: none;
+}
+
+.l1-drag-handle {
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  padding: 0.15rem 0.25rem;
+  line-height: 1;
+  color: var(--accent-green);
+  font-size: 1rem;
+  opacity: 0.85;
+  border-radius: 4px;
+}
+
+.l1-drag-handle:hover {
+  opacity: 1;
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.l1-drag-handle.l1-dragging {
+  cursor: grabbing;
+}
+
+.l1-title {
+  flex: 1;
+  color: var(--accent-green);
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
+}
+
+.l1-hint {
+  color: var(--text-muted);
+  font-size: 0.55rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.l1-step {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  padding: 0.22rem 0;
+  color: var(--text-dim);
+  border-radius: 4px;
+}
+
+.l1-mark {
+  flex-shrink: 0;
+  width: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.l1-text { flex: 1; }
+
+.l1-step.l1-step-current {
+  color: var(--warning);
+  background: rgba(255, 170, 0, 0.07);
+}
+
+.l1-step.l1-step-done {
+  color: var(--accent-green);
+}
+
+.l1-step.l1-step-done .l1-mark {
+  color: var(--accent-green);
+}
+
+.l1-step-static {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border-dim);
+  color: var(--text-muted);
+  font-size: 0.58rem;
+}
+
+/* Guided intro: mini motion demos (no video assets) */
+.level1-coach--guided .l1-demo-block {
+  margin: 0.35rem 0 0.45rem;
+  padding: 0.35rem 0.4rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-dim);
+}
+
+.level1-coach--guided .l1-demo-caption {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.2rem;
+}
+
+.level1-coach--guided .l1-place-demo {
+  position: relative;
+  height: 52px;
+  margin-bottom: 0.35rem;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.level1-coach--guided .l1-place-demo-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background: linear-gradient(180deg, rgba(60, 70, 90, 0.9), rgba(35, 40, 55, 0.95));
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.level1-coach--guided .l1-place-demo-surface {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 14px;
+  background: rgba(18, 22, 30, 0.85);
+}
+
+.level1-coach--guided .l1-place-demo-chip {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 22px;
+  height: 18px;
+  margin-left: -11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #5ee7df;
+  border: 1px solid rgba(94, 231, 223, 0.5);
+  border-radius: 3px;
+  background: rgba(20, 40, 45, 0.95);
+  animation: l1-place-drop 2.4s ease-in-out infinite;
+}
+
+@keyframes l1-place-drop {
+  0%, 12% { transform: translateY(0); opacity: 1; }
+  40% { transform: translateY(26px); opacity: 1; }
+  48% { transform: translateY(26px); opacity: 0.85; }
+  55% { transform: translateY(0); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+.level1-coach--guided .l1-wire-demo {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0;
+}
+
+.level1-coach--guided .l1-demo-port {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.level1-coach--guided .l1-demo-cyan {
+  background: radial-gradient(circle at 30% 30%, #9ff, #2aa89a);
+  box-shadow: 0 0 6px rgba(94, 231, 223, 0.45);
+}
+
+.level1-coach--guided .l1-demo-orange {
+  background: radial-gradient(circle at 30% 30%, #fc8, #c75a12);
+  box-shadow: 0 0 6px rgba(255, 170, 80, 0.35);
+}
+
+.level1-coach--guided .l1-wire-demo-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(80, 90, 110, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.level1-coach--guided .l1-wire-demo-glow {
+  position: absolute;
+  left: -30%;
+  top: 0;
+  width: 30%;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(94, 231, 223, 0.95), transparent);
+  animation: l1-wire-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes l1-wire-pulse {
+  0% { left: -30%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { left: 100%; opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}

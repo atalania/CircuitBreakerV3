@@ -1,0 +1,78 @@
+/* JK level — pulse sequence tracker + embedded JK reference table */
+.sequence-tracker {
+  display: none;
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(13, 16, 24, 0.95);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  padding: 0.8rem;
+  font-family: 'Share Tech Mono', monospace;
+  z-index: 10;
+}
+
+.sequence-tracker.visible { display: block; }
+
+.seq-title {
+  color: var(--accent-blue);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.seq-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.seq-label { color: var(--text-dim); width: 60px; }
+.seq-values { display: flex; gap: 0.4rem; }
+
+.seq-val {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  font-weight: bold;
+}
+
+.seq-val.filled { color: var(--text-bright); border-color: var(--border-bright); }
+.seq-val.match { color: var(--accent-green); border-color: var(--accent-green); background: rgba(0,255,136,0.1); }
+.seq-val.miss { color: var(--danger); border-color: var(--danger); background: rgba(255,51,85,0.1); }
+
+.jk-ref-inline {
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jk-ref-title {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+.jk-ref-row {
+  display: grid;
+  grid-template-columns: 2.2rem 0.6rem 1fr;
+  gap: 0.25rem;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  padding: 0.08rem 0;
+}
+
+.jk-ref-row span:first-child {
+  letter-spacing: 2px;
+}

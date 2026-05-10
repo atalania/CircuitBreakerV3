@@ -1,0 +1,219 @@
+/* Game HUD — fuse timer, score */
+/* ============================================================
+   GAME SCREEN
+   ============================================================ */
+#game-screen {
+  background: var(--bg-deep);
+  position: relative;
+  min-height: 0;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+/* ---- Top HUD Bar ---- */
+.hud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.2rem;
+  background:
+    linear-gradient(180deg, #151210 0%, #0c0a08 100%);
+  border-bottom: 3px solid var(--hazard-black);
+  flex-shrink: 0;
+  min-height: 64px;
+  position: relative;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(232, 188, 8, 0.06);
+}
+
+.hud-bar-fuse-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--hazard-yellow) 0 8px,
+    var(--hazard-black) 8px 16px
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.hud-left { display: flex; align-items: center; gap: 1.2rem; }
+.hud-center { display: flex; flex-direction: column; align-items: center; }
+.hud-right { display: flex; align-items: center; gap: 1rem; }
+
+.hud-score-block {
+  text-align: right;
+}
+
+.level-number {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--danger);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.95;
+}
+
+.level-title {
+  font-family: 'Black Ops One', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--hazard-yellow);
+  letter-spacing: 0.06em;
+  text-shadow: var(--glow-hazard);
+}
+
+.timer-eyebrow {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.timer-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.timer-display {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  letter-spacing: 0.12em;
+  text-shadow: var(--glow-green);
+  transition: color 0.3s;
+}
+
+.timer-display.timer-warning { color: var(--warning); text-shadow: 0 0 16px rgba(255, 194, 40, 0.55); }
+.timer-display.timer-danger { color: var(--danger); text-shadow: var(--glow-red); animation: pulse-danger 0.5s ease infinite; }
+
+.timer-display.timer-lab {
+  font-family: 'Black Ops One', sans-serif;
+  letter-spacing: 0.2em;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 18px rgba(66, 232, 255, 0.4);
+}
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.timer-bar-track {
+  width: 220px;
+  height: 8px;
+  background: #0a0806;
+  border-radius: 2px;
+  overflow: visible;
+  border: 1px solid var(--border-dim);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.fuse-track {
+  position: relative;
+  overflow: visible;
+}
+
+.timer-bar {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent-green) 0 4px,
+    #3a9a3f 4px 8px
+  );
+  border-radius: 1px;
+  transition: width 0.1s linear, background 0.3s, filter 0.3s;
+  box-shadow:
+    0 0 12px rgba(98, 255, 110, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.timer-bar::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translate(50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff9e0 0%, var(--ember-hot) 45%, var(--ember) 100%);
+  box-shadow: 0 0 14px var(--ember), 0 0 6px #fff;
+  animation: spark-flicker 0.4s ease infinite;
+}
+
+@keyframes spark-flicker {
+  0%, 100% { transform: translate(50%, -50%) scale(1); opacity: 1; }
+  50% { transform: translate(50%, -50%) scale(1.15); opacity: 0.88; }
+}
+
+.timer-bar.timer-bar-warning {
+  background: repeating-linear-gradient(90deg, var(--warning) 0 4px, #c99410 4px 8px);
+  box-shadow: 0 0 14px rgba(255, 194, 40, 0.45);
+}
+
+.timer-bar.timer-bar-danger {
+  background: repeating-linear-gradient(90deg, var(--danger) 0 3px, #9a1020 3px 6px);
+  box-shadow: var(--glow-red);
+  animation: fuse-urgent 0.35s ease infinite;
+}
+
+@keyframes fuse-urgent {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+
+.timer-bar.timer-bar-lab::after {
+  display: none;
+}
+
+.score-display {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.score-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.hud-btn {
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.hud-btn:hover {
+  border-color: var(--hazard-yellow);
+  color: var(--hazard-yellow);
+  box-shadow: var(--glow-hazard);
+}
+.timer-lab {
+  color: var(--accent-cyan) !important;
+  letter-spacing: 3px;
+}
+
+.timer-bar-lab {
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)) !important;
+}

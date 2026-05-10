@@ -1,0 +1,39 @@
+/* Design tokens — colors, glows */
+:root {
+  --bg-deep: #070605;
+  --bg-panel: #100e0c;
+  --bg-surface: #161311;
+  --panel-bg: #0c0a09;
+  --border-dim: #2a231c;
+  --border-bright: #3d3228;
+
+  --wire-on: #7cff4a;
+  --wire-off: #2a231c;
+  --led-on: #8fff5a;
+  --led-off: #1a1510;
+  --switch-off: #1f1a14;
+  --switch-knob: #c4b8a8;
+
+  --hazard-yellow: #e8bc08;
+  --hazard-black: #0a0908;
+  --ember: #ff6b28;
+  --ember-hot: #ffb022;
+
+  --accent-blue: #3db8ff;
+  --accent-cyan: #42e8ff;
+  --accent-green: #62ff6e;
+  --accent-red: #ff3d4a;
+  --warning: #ffc228;
+  --danger: #ff2d3d;
+
+  --text-bright: #ede6dc;
+  --text-dim: #8a7d6e;
+  --text-muted: #52483c;
+
+  --glow-green: 0 0 18px rgba(98, 255, 110, 0.45);
+  --glow-red: 0 0 22px rgba(255, 45, 60, 0.55);
+  --glow-ember: 0 0 20px rgba(255, 107, 40, 0.45);
+  --glow-hazard: 0 0 14px rgba(232, 188, 8, 0.35);
+  --glow-blue: 0 0 16px rgba(61, 184, 255, 0.35);
+}
+

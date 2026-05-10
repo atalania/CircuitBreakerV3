@@ -1,0 +1,186 @@
+/* Circuit workspace — objective, viewport, actions */
+/* ---- Main Game Area ---- */
+.game-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Circuit Panel (Left) */
+.circuit-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  padding: clamp(0.45rem, 1.2vh, 1rem);
+  overflow: hidden;
+}
+
+.objective-bar {
+  background: linear-gradient(90deg, rgba(42, 32, 24, 0.5) 0%, var(--bg-surface) 12%);
+  border: 1px solid var(--border-dim);
+  border-left: 5px solid var(--hazard-yellow);
+  border-radius: 2px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(232, 188, 8, 0.08);
+}
+
+.objective-icon {
+  font-size: 1.45rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(255, 80, 40, 0.45));
+}
+
+.objective-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+#objective-text {
+  font-size: 0.85rem;
+  color: var(--text-bright);
+  line-height: 1.4;
+}
+
+#objective-text strong,
+.chat-text strong,
+.l1-text strong {
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.circuit-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 80, 40, 0.04) 0%, transparent 65%),
+    linear-gradient(180deg, #12100e 0%, #0a0806 100%);
+  border: 2px solid var(--border-dim);
+  border-radius: 2px;
+  overflow: auto;
+  position: relative;
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(232, 188, 8, 0.07);
+}
+
+.viewport-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: var(--hazard-yellow);
+  border-style: solid;
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.viewport-corner--tl { top: 6px; left: 6px; border-width: 2px 0 0 2px; }
+.viewport-corner--tr { top: 6px; right: 6px; border-width: 2px 2px 0 0; }
+.viewport-corner--bl { bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }
+.viewport-corner--br { bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }
+
+#circuit-container {
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.circuit-svg {
+  display: block;
+  flex-shrink: 1;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.circuit-flash {
+  animation: flash-green 0.4s ease;
+}
+
+@keyframes flash-green {
+  0% { box-shadow: inset 0 0 0 rgba(0,255,136,0); }
+  50% { box-shadow: inset 0 0 40px rgba(0,255,136,0.15); }
+  100% { box-shadow: inset 0 0 0 rgba(0,255,136,0); }
+}
+
+/* Action bar below circuit */
+.action-bar {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 2px;
+  font-family: 'Black Ops One', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+#submit-btn {
+  background: linear-gradient(180deg, rgba(98, 255, 110, 0.14), rgba(20, 35, 22, 0.95));
+  border: 2px solid var(--accent-green);
+  color: #c8ffc8;
+}
+
+#submit-btn:hover {
+  background: rgba(98, 255, 110, 0.22);
+  box-shadow: var(--glow-green);
+  color: #fff;
+}
+
+#hint-btn {
+  background: linear-gradient(180deg, rgba(61, 184, 255, 0.12), rgba(18, 28, 36, 0.95));
+  border: 2px solid var(--accent-blue);
+  color: var(--accent-cyan);
+  flex: 0.5;
+}
+
+#hint-btn:hover {
+  background: rgba(61, 184, 255, 0.2);
+  box-shadow: var(--glow-blue);
+}
+
+.action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  box-shadow: none !important;
+}
+
+#reset-seq-btn {
+  background: linear-gradient(180deg, rgba(255, 194, 40, 0.12), rgba(35, 28, 14, 0.95));
+  border: 2px solid var(--warning);
+  color: var(--warning);
+  flex: 0.5;
+  display: none;
+}
+#reset-seq-btn:hover {
+  background: rgba(255, 194, 40, 0.2);
+  box-shadow: var(--glow-hazard);
+}

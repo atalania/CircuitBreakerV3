@@ -257,38 +257,208 @@ function refreshLevel1Coach(coach, getState) {
   }
 }
 
+/** @param {number} a @param {number} b @param {number} c */
+function level1ExpectedXyz(a, b, c) {
+  return { x: a & b, y: c ? 0 : 1, z: b | c };
+}
+
 /**
- * @param {{ id: number }} level
+ * Full reference table for Gate Basics (three outputs); live digits update with pins + wiring.
+ * @param {HTMLElement} viewport
+ */
+function mountLevel1FullTruthTable(viewport) {
+  const tracker = document.createElement("div");
+  tracker.className = "truth-table-tracker truth-table-tracker--wide visible";
+  tracker.id = "tt-tracker";
+  tracker.dataset.variant = "l1-full";
+
+  const combos = ["000", "001", "010", "011", "100", "101", "110", "111"];
+  const rows = combos
+    .map((c) => {
+      const a = +c[0];
+      const b = +c[1];
+      const cc = +c[2];
+      const { x, y, z } = level1ExpectedXyz(a, b, cc);
+      return `
+        <div class="tt-row tt-row--l1" data-combo="${c}">
+          <span class="tt-in">${c}</span>
+          <span class="tt-spec-xyz" title="Spec: X Y Z">${x}${y}${z}</span>
+          <span class="tt-live-xyz" title="Your circuit (current ABC row)">— — —</span>
+        </div>`;
+    })
+    .join("");
+
+  tracker.innerHTML = `
+      <div class="tt-title">TARGET TRUTH TABLE</div>
+      <div class="tt-head tt-head--l1">
+        <span>ABC</span><span class="tt-hdr-mid">need X·Y·Z</span><span class="tt-hdr-live">yours</span>
+      </div>
+      ${rows}
+      <div class="tt-footnote">DISARM checks every row at once.</div>
+    `;
+  viewport.appendChild(tracker);
+}
+
+/**
+ * Guided intro: four A,B rows; X = A·B only.
+ * @param {HTMLElement} viewport
+ */
+function mountLevel1GuidedTruthTable(viewport) {
+  const tracker = document.createElement("div");
+  tracker.className = "truth-table-tracker visible";
+  tracker.id = "tt-tracker";
+  tracker.dataset.variant = "l1-guided";
+
+  const combos = ["00", "01", "10", "11"];
+  const rows = combos
+    .map((c) => {
+      const a = +c[0];
+      const b = +c[1];
+      const x = a & b;
+      return `
+        <div class="tt-row tt-row--l1g" data-combo="${c}">
+          <span class="tt-in">${c}</span>
+          <span class="tt-spec-x" title="Spec for X">${x}</span>
+          <span class="tt-live-x" title="LED X">—</span>
+        </div>`;
+    })
+    .join("");
+
+  tracker.innerHTML = `
+      <div class="tt-title">AND TRUTH TABLE</div>
+      <div class="tt-head tt-head--l1g">
+        <span>AB</span><span class="tt-hdr-mid">need X</span><span class="tt-hdr-live">yours</span>
+      </div>
+      ${rows}
+      <div class="tt-footnote">Tap pins A,B — middle column is the spec.</div>
+    `;
+  viewport.appendChild(tracker);
+}
+
+/**
+ * Levels 2 & 5 — spec column filled from algebra; live column follows your wiring for current ABC.
+ * @param {HTMLElement} viewport
+ * @param {{ id: number, expectedQ?: (a:number,b:number,c:number)=>number, expectedF?: (a:number,b:number,c:number)=>number }} level
+ */
+function mountSingleOutputTruthTable(viewport, level) {
+  const tracker = document.createElement("div");
+  tracker.className = "truth-table-tracker visible";
+  tracker.id = "tt-tracker";
+  tracker.dataset.variant = "single";
+
+  const allCombos = ["000", "001", "010", "011", "100", "101", "110", "111"];
+  const outputLabel = level.id === 2 ? "Q" : "F";
+  const expectFn = level.id === 2 ? level.expectedQ : level.expectedF;
+  const totalWinning = level.id === 2 ? 6 : 4;
+
+  const rows = allCombos
+    .map((c) => {
+      const a = +c[0];
+      const b = +c[1];
+      const cc = +c[2];
+      const spec = expectFn(a, b, cc);
+      return `
+        <div class="tt-row" data-combo="${c}" data-expected="${spec}">
+          <span>${c[0]}</span><span>${c[1]}</span><span>${c[2]}</span>
+          <span class="tt-spec">${spec}</span>
+          <span class="tt-live">—</span>
+          <span class="tt-check">—</span>
+        </div>`;
+    })
+    .join("");
+
+  tracker.innerHTML = `
+      <div class="tt-title">TRUTH TABLE</div>
+      <div class="tt-head tt-head--single">
+        <span>A</span><span>B</span><span>C</span>
+        <span class="tt-hdr-spec">${outputLabel}<span class="tt-sub">spec</span></span>
+        <span class="tt-hdr-live">${outputLabel}<span class="tt-sub">live</span></span>
+        <span class="tt-hdr-mark">✓</span>
+      </div>
+      ${rows}
+      <div class="tt-progress" id="tt-progress">0 / ${totalWinning} rows</div>
+    `;
+
+  viewport.appendChild(tracker);
+}
+
+/**
+ * @param {{ id: number, isGuidedIntro?: boolean, expectedQ?: Function, expectedF?: Function }} level
  */
 export function createTruthTableTracker(level) {
   const viewport = document.querySelector(".circuit-viewport");
   if (!viewport) return;
-  const tracker = document.createElement("div");
-  tracker.className = "truth-table-tracker visible";
-  tracker.id = "tt-tracker";
 
-  const allCombos = ["000", "001", "010", "011", "100", "101", "110", "111"];
-  const outputLabel = level.id === 2 ? "Q" : "F";
+  if (level.id === 1 && level.isGuidedIntro) {
+    mountLevel1GuidedTruthTable(viewport);
+    return;
+  }
+  if (level.id === 1) {
+    mountLevel1FullTruthTable(viewport);
+    return;
+  }
+  if (level.id === 2 || level.id === 5) {
+    mountSingleOutputTruthTable(viewport, level);
+  }
+}
 
-  tracker.innerHTML = `
-      <div class="tt-title">TRUTH TABLE</div>
-      <div style="display:flex;gap:0.5rem;color:var(--text-muted);font-size:0.6rem;padding:0.1rem 0.3rem;letter-spacing:1px;">
-        <span>A</span><span>B</span><span>C</span><span style="margin-left:0.3rem">${outputLabel}</span><span style="margin-left:auto">✓</span>
-      </div>
-      ${allCombos
-        .map(
-          (c) => `
-        <div class="tt-row" data-combo="${c}">
-          <span>${c[0]}</span><span>${c[1]}</span><span>${c[2]}</span>
-          <span style="margin-left:0.3rem" class="tt-output">?</span>
-          <span style="margin-left:auto" class="tt-check">—</span>
-        </div>`
-        )
-        .join("")}
-      <div class="tt-progress" id="tt-progress">0 / ${level.id === 2 ? 6 : 4} found</div>
-    `;
+/**
+ * Refresh live outputs for Level 1 tables when pins or wiring change.
+ * @param {import('../modules/circuitLab.js').CircuitLab} lab
+ * @param {{ id: number, isGuidedIntro?: boolean }} level
+ */
+export function refreshLevel1TruthTableFromLab(lab, level) {
+  const tracker = document.getElementById("tt-tracker");
+  if (!tracker || level.id !== 1) return;
 
-  viewport.appendChild(tracker);
+  const pins = lab.getPinValues();
+  const variant = tracker.dataset.variant;
+
+  if (variant === "l1-guided") {
+    const combo = `${pins.A ?? 0}${pins.B ?? 0}`;
+    const ledX = lab.findLedByLabel("X");
+    tracker.querySelectorAll(".tt-row--l1g").forEach((row) => {
+      row.classList.toggle("tt-row-current", row.dataset.combo === combo);
+      const live = row.querySelector(".tt-live-x");
+      if (!live) return;
+      if (row.dataset.combo !== combo) {
+        live.textContent = "—";
+        return;
+      }
+      if (!ledX) {
+        live.textContent = "?";
+        return;
+      }
+      const r = lab.evaluate({});
+      live.textContent = String(r.outputs[ledX.id] ?? 0);
+    });
+    return;
+  }
+
+  if (variant === "l1-full") {
+    const combo = `${pins.A ?? 0}${pins.B ?? 0}${pins.C ?? 0}`;
+    const ledX = lab.findLedByLabel("X");
+    const ledY = lab.findLedByLabel("Y");
+    const ledZ = lab.findLedByLabel("Z");
+    tracker.querySelectorAll(".tt-row--l1").forEach((row) => {
+      row.classList.toggle("tt-row-current", row.dataset.combo === combo);
+      const live = row.querySelector(".tt-live-xyz");
+      if (!live) return;
+      if (row.dataset.combo !== combo) {
+        live.textContent = "— — —";
+        return;
+      }
+      if (!ledX || !ledY || !ledZ) {
+        live.textContent = "? ? ?";
+        return;
+      }
+      const r = lab.evaluate({});
+      const xv = r.outputs[ledX.id] ?? 0;
+      const yv = r.outputs[ledY.id] ?? 0;
+      const zv = r.outputs[ledZ.id] ?? 0;
+      live.textContent = `${xv} ${yv} ${zv}`;
+    });
+  }
 }
 
 /**
@@ -313,6 +483,14 @@ export function createSrLatchTracker(level) {
           </div>`
         )
         .join("")}
+      <div class="sr-ref-block" aria-label="SR latch reference">
+        <div class="sr-ref-title">BEHAVIOR (ideal)</div>
+        <div class="sr-ref-row"><span>S R</span><span></span><span>effect</span></div>
+        <div class="sr-ref-row"><span>0 0</span><span>→</span><span>hold Q</span></div>
+        <div class="sr-ref-row"><span>1 0</span><span>→</span><span>set Q=1</span></div>
+        <div class="sr-ref-row"><span>0 1</span><span>→</span><span>reset Q=0</span></div>
+        <div class="sr-ref-row sr-ref-warn"><span>1 1</span><span>→</span><span>invalid — avoid</span></div>
+      </div>
     `;
   viewport.appendChild(tracker);
   updateSrLatchTracker(0);
@@ -364,6 +542,14 @@ export function createSequenceTracker() {
           <div class="seq-val">_</div>
         </div>
       </div>
+      <div class="jk-ref-inline" aria-label="JK flip-flop reference">
+        <div class="jk-ref-title">ON EACH CLOCK TAP</div>
+        <div class="jk-ref-row"><span>J K</span><span></span><span>Q next</span></div>
+        <div class="jk-ref-row"><span>0 0</span><span>→</span><span>no change</span></div>
+        <div class="jk-ref-row"><span>1 0</span><span>→</span><span>set 1</span></div>
+        <div class="jk-ref-row"><span>0 1</span><span>→</span><span>reset 0</span></div>
+        <div class="jk-ref-row"><span>1 1</span><span>→</span><span>toggle</span></div>
+      </div>
     `;
 
   viewport.appendChild(tracker);
@@ -408,30 +594,52 @@ export function updateTruthTableTrackerDom(combo, outputVal, progress, expected)
   const tracker = document.getElementById("tt-tracker");
   if (!tracker) return;
 
+  if (tracker.dataset.variant === "single") {
+    tracker.querySelectorAll(".tt-row .tt-live").forEach((el) => {
+      el.textContent = "—";
+    });
+  }
+
   const row = tracker.querySelector(`[data-combo="${combo}"]`);
   if (row) {
-    const output = row.querySelector(".tt-output");
+    const live = row.querySelector(".tt-live");
     const check = row.querySelector(".tt-check");
-    output.textContent = outputVal;
+    if (live) live.textContent = String(outputVal);
 
-    const hasExpected = expected === 0 || expected === 1;
-    const matches = hasExpected ? outputVal === expected : outputVal === 1;
+    const expAttr = row.getAttribute("data-expected");
+    const expFromDom = expAttr === "0" || expAttr === "1" ? parseInt(expAttr, 10) : null;
+    const effectiveExpected = expected === 0 || expected === 1 ? expected : expFromDom;
+
+    const hasExpected = effectiveExpected === 0 || effectiveExpected === 1;
+    const matches = hasExpected ? outputVal === effectiveExpected : outputVal === 1;
     const found = !!(progress && progress.foundSet && progress.foundSet.has(combo));
 
     row.classList.remove("wrong");
     if (matches && found) {
       row.classList.add("found");
-      check.textContent = "✓";
+      if (check) check.textContent = "✓";
     } else if (matches) {
-      check.textContent = hasExpected && expected === 0 ? "—" : "?";
+      if (check) check.textContent = hasExpected && effectiveExpected === 0 ? "—" : "?";
     } else {
       row.classList.add("wrong");
-      check.textContent = "✗";
+      if (check) check.textContent = "✗";
       setTimeout(() => row.classList.remove("wrong"), 1000);
     }
   }
 
-  if (progress) {
+  if (progress && tracker.dataset.variant === "single") {
+    tracker.querySelectorAll("[data-combo]").forEach((r) => {
+      const c = r.getAttribute("data-combo") || "";
+      const chk = r.querySelector(".tt-check");
+      const expAttr = r.getAttribute("data-expected");
+      const exp = expAttr === "0" || expAttr === "1" ? parseInt(expAttr, 10) : null;
+      const isFound = progress.foundSet && progress.foundSet.has(c);
+      if (isFound && chk && exp === 1) {
+        r.classList.add("found");
+        chk.textContent = "✓";
+      }
+    });
+
     const prog = tracker.querySelector("#tt-progress");
     if (prog) prog.textContent = `${progress.found} / ${progress.total} found`;
   }

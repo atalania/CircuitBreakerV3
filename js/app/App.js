@@ -29,6 +29,7 @@ import {
   updateSrLatchTracker,
   updateSequenceTrackerDom,
   updateTruthTableTrackerDom,
+  refreshLevel1TruthTableFromLab,
 } from "./levelOverlays.js";
 import { processCampaignLabSubmit } from "./campaignSubmit.js";
 import { submitEndlessRound } from "./endlessSubmit.js";
@@ -99,6 +100,9 @@ export class App {
 
   _onLabUiChanged() {
     this._labRedraw();
+    if (this.currentLevel?.id === 1) {
+      refreshLevel1TruthTableFromLab(this.circuitLab, this.currentLevel);
+    }
     if (this.currentLevel?.isGuidedIntro) {
       refreshLevel1GuidedCoachFromDom(this.circuitLab);
       this._updateGuidedSequentialCoach();
@@ -620,15 +624,31 @@ export class App {
       if (tracker) {
         tracker.querySelectorAll(".tt-row").forEach((row) => {
           row.classList.remove("found", "wrong");
-          const out = row.querySelector(".tt-output");
+          const live = row.querySelector(".tt-live");
           const chk = row.querySelector(".tt-check");
-          if (out) out.textContent = "?";
+          if (live) live.textContent = "—";
           if (chk) chk.textContent = "—";
         });
         const prog = tracker.querySelector("#tt-progress");
         const total = cur.id === 2 ? 6 : 4;
         if (prog) prog.textContent = `0 / ${total} found`;
       }
+    }
+    if (cur?.id === 1) {
+      const tracker = document.getElementById("tt-tracker");
+      if (tracker?.dataset.variant === "l1-full") {
+        tracker.querySelectorAll(".tt-live-xyz").forEach((el) => {
+          el.textContent = "— — —";
+        });
+        tracker.querySelectorAll(".tt-row--l1").forEach((row) => row.classList.remove("tt-row-current"));
+      }
+      if (tracker?.dataset.variant === "l1-guided") {
+        tracker.querySelectorAll(".tt-live-x").forEach((el) => {
+          el.textContent = "—";
+        });
+        tracker.querySelectorAll(".tt-row--l1g").forEach((row) => row.classList.remove("tt-row-current"));
+      }
+      refreshLevel1TruthTableFromLab(this.circuitLab, cur);
     }
     if (cur?.id === 3) {
       updateSrLatchTracker(0);
@@ -660,15 +680,19 @@ export class App {
     if (level.id === 2 || level.id === 5) {
       createTruthTableTracker(level);
     }
+    if (level.id === 1) {
+      if (level.isGuidedIntro) {
+        createLevel1GuidedCoach(this.circuitLab);
+      }
+      createTruthTableTracker(level);
+      refreshLevel1TruthTableFromLab(this.circuitLab, level);
+    }
     if (level.id === 3) {
       createSrLatchTracker(level);
     }
     if (level.id === 4) {
       createSequenceTracker();
       resetBtn.style.display = "block";
-    }
-    if (level.id === 1 && level.isGuidedIntro) {
-      createLevel1GuidedCoach(this.circuitLab);
     }
   }
 
